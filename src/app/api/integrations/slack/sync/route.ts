@@ -82,7 +82,7 @@ export async function POST() {
 
     // Get user info to resolve user IDs to names
     const userCache: Record<string, string> = {};
-    const uniqueUsers = [...new Set(allMessages.map(m => m.sender))];
+    const uniqueUsers = Array.from(new Set(allMessages.map(m => m.sender)));
 
     for (const userId of uniqueUsers.slice(0, 20)) { // Limit user lookups
       if (userId === 'unknown') continue;
