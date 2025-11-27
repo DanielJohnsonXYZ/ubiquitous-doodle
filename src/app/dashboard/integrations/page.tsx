@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Mail, MessageSquare, FileText, CheckCircle, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 
@@ -49,6 +49,30 @@ const integrationConfigs: IntegrationConfig[] = [
 ];
 
 export default function IntegrationsPage() {
+  return (
+    <Suspense fallback={<IntegrationsLoading />}>
+      <IntegrationsContent />
+    </Suspense>
+  );
+}
+
+function IntegrationsLoading() {
+  return (
+    <div className="p-8">
+      <div className="animate-pulse">
+        <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
+        <div className="h-4 w-96 bg-gray-200 rounded mb-8"></div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IntegrationsContent() {
   const searchParams = useSearchParams();
   const [integrations, setIntegrations] = useState<Record<string, IntegrationData | null>>({
     gmail: null,
