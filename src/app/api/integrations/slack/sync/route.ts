@@ -36,7 +36,11 @@ export async function POST() {
     const conversationsData = await conversationsResponse.json();
 
     if (!conversationsData.ok) {
-      throw new Error(conversationsData.error || 'Failed to fetch conversations');
+      console.error('Slack API error:', conversationsData);
+      const errorMsg = conversationsData.error === 'missing_scope'
+        ? `Missing scope: ${conversationsData.needed || 'unknown'}. Please disconnect and reconnect Slack.`
+        : conversationsData.error || 'Failed to fetch conversations';
+      return NextResponse.json({ error: errorMsg }, { status: 400 });
     }
 
     const channels = conversationsData.channels || [];

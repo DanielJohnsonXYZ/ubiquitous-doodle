@@ -8,6 +8,8 @@ const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/slack/
 const SCOPES = [
   'channels:history',
   'channels:read',
+  'groups:history',
+  'groups:read',
   'im:history',
   'im:read',
   'users:read',
