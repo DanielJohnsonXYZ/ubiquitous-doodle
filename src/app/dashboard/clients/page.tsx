@@ -1,52 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search } from 'lucide-react';
 import ClientCard from '@/components/ClientCard';
 import type { Client } from '@/types';
 
-// Demo data - will be replaced with real data
-const demoClients: Client[] = [
-  {
-    id: '1',
-    name: 'Dear Health',
-    company: 'Dear Health Inc.',
-    email: 'team@dearhealth.com',
-    status: 'healthy',
-    health_score: 85,
-    last_contact: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    name: 'Acme Corp',
-    company: 'Acme Corporation',
-    email: 'contact@acme.com',
-    status: 'at_risk',
-    health_score: 42,
-    last_contact: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    name: 'TechStart',
-    company: 'TechStart Inc.',
-    email: 'hello@techstart.io',
-    status: 'opportunity',
-    health_score: 78,
-    last_contact: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
 export default function ClientsPage() {
-  const [clients] = useState<Client[]>(demoClients);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showAddModal, setShowAddModal] = useState(false);
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const fetchClients = async () => {
+    try {
+      const response = await fetch('/api/clients');
+      const data = await response.json();
+      setClients(data.clients || []);
+    } catch (err) {
+      console.error('Failed to fetch clients:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClientAdded = () => {
+    fetchClients();
+    setShowAddModal(false);
+  };
 
   const filteredClients = clients.filter((client) => {
     const matchesSearch =
@@ -55,6 +40,22 @@ export default function ClientsPage() {
     const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse">
+          <div className="h-8 w-32 bg-gray-200 rounded mb-4"></div>
+          <div className="h-4 w-64 bg-gray-200 rounded mb-8"></div>
+          <div className="grid grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-48 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -98,44 +99,84 @@ export default function ClientsPage() {
       </div>
 
       {/* Client Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        {filteredClients.map((client) => (
-          <ClientCard key={client.id} client={client} />
-        ))}
-      </div>
-
-      {filteredClients.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No clients found</p>
+      {filteredClients.length > 0 ? (
+        <div className="grid grid-cols-2 gap-4">
+          {filteredClients.map((client) => (
+            <ClientCard key={client.id} client={client} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-gray-50 rounded-xl">
+          <p className="text-gray-500 mb-4">
+            {clients.length === 0 ? 'No clients yet. Add your first client!' : 'No clients match your search.'}
+          </p>
+          {clients.length === 0 && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+            >
+              Add Client
+            </button>
+          )}
         </div>
       )}
 
       {/* Add Client Modal */}
       {showAddModal && (
-        <AddClientModal onClose={() => setShowAddModal(false)} />
+        <AddClientModal onClose={() => setShowAddModal(false)} onSuccess={handleClientAdded} />
       )}
     </div>
   );
 }
 
-function AddClientModal({ onClose }: { onClose: () => void }) {
+function AddClientModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [formData, setFormData] = useState({
     name: '',
     company: '',
     email: '',
   });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Save to Supabase
-    console.log('Adding client:', formData);
-    onClose();
+    setSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add client');
+      }
+
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add client');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 w-full max-w-md">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Add New Client</h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
@@ -180,15 +221,17 @@ function AddClientModal({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
+              disabled={saving}
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800"
+              disabled={saving}
+              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50"
             >
-              Add Client
+              {saving ? 'Adding...' : 'Add Client'}
             </button>
           </div>
         </form>

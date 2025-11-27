@@ -1,123 +1,78 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   AlertTriangle,
   TrendingUp,
   Users,
   Activity,
   RefreshCw,
+  Plus,
 } from 'lucide-react';
 import ClientCard from '@/components/ClientCard';
 import InsightCard from '@/components/InsightCard';
 import type { Client, Insight } from '@/types';
 
-// Demo data - will be replaced with real data from Supabase
-const demoClients: Client[] = [
-  {
-    id: '1',
-    name: 'Dear Health',
-    company: 'Dear Health Inc.',
-    email: 'team@dearhealth.com',
-    status: 'healthy',
-    health_score: 85,
-    last_contact: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    name: 'Acme Corp',
-    company: 'Acme Corporation',
-    email: 'contact@acme.com',
-    status: 'at_risk',
-    health_score: 42,
-    last_contact: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(), // 14 days ago
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    name: 'TechStart',
-    company: 'TechStart Inc.',
-    email: 'hello@techstart.io',
-    status: 'opportunity',
-    health_score: 78,
-    last_contact: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-const demoInsights: (Insight & { clientName: string })[] = [
-  {
-    id: '1',
-    client_id: '2',
-    clientName: 'Acme Corp',
-    type: 'risk',
-    severity: 'high',
-    title: 'Response time has doubled',
-    description: 'Client responses have slowed from 2 hours to 4+ hours over the past two weeks. Last message showed frustration about timeline delays.',
-    evidence: [
-      "I'm a bit concerned about where we're at with the timeline...",
-      "Can we get an update on when this will be resolved?",
-    ],
-    suggested_action: 'Send check-in message',
-    is_resolved: false,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    client_id: '3',
-    clientName: 'TechStart',
-    type: 'opportunity',
-    severity: 'medium',
-    title: 'Expansion signal detected',
-    description: 'Client mentioned expanding to 3 new markets and asked about "scaling our current setup" twice this week.',
-    evidence: [
-      "We're looking at expanding into APAC next quarter",
-      "What would it take to scale what we have now?",
-    ],
-    suggested_action: 'Draft expansion proposal',
-    is_resolved: false,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    client_id: '1',
-    clientName: 'Dear Health',
-    type: 'sentiment',
-    severity: 'low',
-    title: 'Positive feedback received',
-    description: 'Client expressed satisfaction with recent deliverables and mentioned the project is "exceeding expectations".',
-    evidence: [
-      "Really happy with how this turned out",
-      "This is exactly what we were hoping for",
-    ],
-    suggested_action: 'Request testimonial',
-    is_resolved: false,
-    created_at: new Date().toISOString(),
-  },
-];
-
 export default function DashboardPage() {
-  const [clients, setClients] = useState<Client[]>(demoClients);
-  const [insights, setInsights] = useState<(Insight & { clientName: string })[]>(demoInsights);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [insights, setInsights] = useState<(Insight & { clientName: string })[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [clientsRes, insightsRes] = await Promise.all([
+        fetch('/api/clients'),
+        fetch('/api/insights'),
+      ]);
+
+      const clientsData = await clientsRes.json();
+      const insightsData = await insightsRes.json();
+
+      setClients(clientsData.clients || []);
+      setInsights(insightsData.insights || []);
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchData();
+    setIsRefreshing(false);
+  };
 
   const stats = {
     totalClients: clients.length,
     atRisk: clients.filter((c) => c.status === 'at_risk').length,
     opportunities: clients.filter((c) => c.status === 'opportunity').length,
-    avgHealth: Math.round(clients.reduce((sum, c) => sum + c.health_score, 0) / clients.length),
+    avgHealth: clients.length > 0
+      ? Math.round(clients.reduce((sum, c) => sum + c.health_score, 0) / clients.length)
+      : 0,
   };
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    // TODO: Fetch real data from API
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsRefreshing(false);
-  };
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse">
+          <div className="h-8 w-32 bg-gray-200 rounded mb-4"></div>
+          <div className="h-4 w-64 bg-gray-200 rounded mb-8"></div>
+          <div className="grid grid-cols-4 gap-4 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -133,7 +88,7 @@ export default function DashboardPage() {
           className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Sync Now
+          Refresh
         </button>
       </div>
 
@@ -178,44 +133,72 @@ export default function DashboardPage() {
               <Activity className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{stats.avgHealth}%</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.avgHealth || 0}%</p>
               <p className="text-sm text-gray-500">Avg Health</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-8">
-        {/* Clients */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Clients</h2>
-          <div className="space-y-4">
-            {clients.map((client) => (
-              <ClientCard
-                key={client.id}
-                client={client}
-                latestInsight={
-                  insights.find((i) => i.client_id === client.id)?.description
-                }
-              />
-            ))}
+      {clients.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Welcome to Relationship Intelligence!</h3>
+          <p className="text-gray-500 mb-6">Get started by adding your first client and connecting Slack.</p>
+          <div className="flex justify-center gap-4">
+            <Link
+              href="/dashboard/clients"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+            >
+              <Plus className="h-4 w-4" />
+              Add Client
+            </Link>
+            <Link
+              href="/dashboard/integrations"
+              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+            >
+              Connect Slack
+            </Link>
           </div>
         </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-8">
+          {/* Clients */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Clients</h2>
+            <div className="space-y-4">
+              {clients.map((client) => (
+                <ClientCard
+                  key={client.id}
+                  client={client}
+                  latestInsight={
+                    insights.find((i) => i.client_id === client.id)?.description
+                  }
+                />
+              ))}
+            </div>
+          </div>
 
-        {/* Recent Insights */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Insights</h2>
-          <div className="space-y-4">
-            {insights.map((insight) => (
-              <InsightCard
-                key={insight.id}
-                insight={insight}
-                clientName={insight.clientName}
-              />
-            ))}
+          {/* Recent Insights */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Insights</h2>
+            {insights.length > 0 ? (
+              <div className="space-y-4">
+                {insights.map((insight) => (
+                  <InsightCard
+                    key={insight.id}
+                    insight={insight}
+                    clientName={insight.clientName}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-gray-50 rounded-xl p-8 text-center">
+                <p className="text-gray-500">No insights yet. Connect Slack and sync messages to generate insights.</p>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
