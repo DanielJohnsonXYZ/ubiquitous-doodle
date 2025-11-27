@@ -5,10 +5,10 @@ export const dynamic = 'force-dynamic';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ type: string }> }
+  { params }: { params: { type: string } }
 ) {
   try {
-    const { type } = await params;
+    const { type } = params;
     const supabase = createServerClient();
 
     // Delete the integration from database
