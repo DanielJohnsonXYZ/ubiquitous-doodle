@@ -12,23 +12,36 @@ export async function POST() {
     // Get unanalyzed communications
     const { data: communications, error: commError } = await supabase
       .from('communications')
-      .select('*, clients(*)')
+      .select('*')
       .eq('analyzed', false)
       .order('timestamp', { ascending: false })
       .limit(10);
 
     if (commError) {
+      console.error('Communications query error:', commError);
       throw commError;
     }
 
     if (!communications || communications.length === 0) {
-      return NextResponse.json({ message: 'No new communications to analyze' });
+      return NextResponse.json({ message: 'No new communications to analyze', analyzed: 0 });
     }
+
+    // Get all clients
+    const { data: clients } = await supabase.from('clients').select('*');
+    const clientMap: Record<string, Client> = {};
+    (clients || []).forEach((c: Client) => {
+      clientMap[c.id] = c;
+    });
 
     const results = [];
 
     for (const comm of communications) {
-      const client = comm.clients as Client;
+      const client = clientMap[comm.client_id];
+
+      if (!client) {
+        console.error('No client found for communication:', comm.id);
+        continue;
+      }
 
       // Get recent history for context
       const { data: history } = await supabase

@@ -41,6 +41,7 @@ export default function DigestPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDigest();
@@ -63,7 +64,17 @@ export default function DigestPage() {
   const handleGenerateDigest = async () => {
     setIsGenerating(true);
     setError(null);
+    setStatus('Analyzing messages with AI...');
+
     try {
+      // First analyze messages to generate insights
+      const analyzeResponse = await fetch('/api/analyze', { method: 'POST' });
+      const analyzeData = await analyzeResponse.json();
+      console.log('Analysis result:', analyzeData);
+
+      setStatus('Generating digest...');
+
+      // Then generate the digest
       const response = await fetch('/api/digest', { method: 'POST' });
       const data = await response.json();
       if (data.error) {
@@ -75,6 +86,7 @@ export default function DigestPage() {
       setError('Failed to generate digest');
     } finally {
       setIsGenerating(false);
+      setStatus(null);
     }
   };
 
@@ -119,21 +131,23 @@ export default function DigestPage() {
           {error && (
             <p className="text-red-600 text-sm mb-4">{error}</p>
           )}
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-col items-center gap-4">
             <button
               onClick={handleGenerateDigest}
               disabled={isGenerating}
               className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
-              {isGenerating ? 'Generating...' : 'Generate Digest'}
+              {status || (isGenerating ? 'Processing...' : 'Analyze & Generate Digest')}
             </button>
-            <Link
-              href="/dashboard/clients"
-              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
-            >
-              Add Clients
-            </Link>
+            {!isGenerating && (
+              <Link
+                href="/dashboard/clients"
+                className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+              >
+                Add Clients
+              </Link>
+            )}
           </div>
         </div>
       </div>
