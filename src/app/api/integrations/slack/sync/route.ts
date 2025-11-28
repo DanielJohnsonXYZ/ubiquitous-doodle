@@ -137,13 +137,13 @@ export async function POST() {
         const channelLower = message.channel_name.toLowerCase();
 
         // Check if any part of client name/company appears in message, sender, or channel
-        return nameParts.some(part =>
+        return nameParts.some((part: string) =>
           part.length > 2 && (
             contentLower.includes(part) ||
             senderLower.includes(part) ||
             channelLower.includes(part)
           )
-        ) || companyParts.some(part =>
+        ) || companyParts.some((part: string) =>
           part.length > 2 && (
             contentLower.includes(part) ||
             senderLower.includes(part) ||
