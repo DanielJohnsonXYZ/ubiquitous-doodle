@@ -167,7 +167,9 @@ function IntegrationsContent() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage({ type: 'success', text: `Synced ${data.synced || 0} messages from ${integrationId}` });
+        const stored = data.stored ?? data.synced ?? 0;
+        const found = data.found ?? stored;
+        setMessage({ type: 'success', text: `Synced ${stored} of ${found} messages from ${integrationId}` });
         fetchIntegrations(); // Refresh to get updated last_sync
       } else {
         setMessage({ type: 'error', text: data.error || 'Sync failed' });
