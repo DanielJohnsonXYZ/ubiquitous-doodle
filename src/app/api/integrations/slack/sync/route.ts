@@ -116,45 +116,56 @@ export async function POST() {
     }
 
     // Get all clients to match messages
-    const { data: clients } = await supabase.from('clients').select('id, email, name, company');
+    const { data: clients, error: clientsError } = await supabase.from('clients').select('id, email, name, company');
 
-    // If there's only one client, assign all messages to them
-    // Otherwise try smart matching
-    const defaultClient = clients?.length === 1 ? clients[0] : null;
+    console.log('Clients found:', clients?.length || 0, clientsError ? `Error: ${clientsError.message}` : '');
+
+    if (!clients || clients.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No clients found. Please add a client first.',
+        found: allMessages.length,
+        stored: 0,
+      });
+    }
+
+    // If there's only one client, assign ALL messages to them
+    const singleClient = clients.length === 1 ? clients[0] : null;
 
     let storedCount = 0;
+    let errorCount = 0;
 
     // Process and store ALL messages
     for (const message of allMessages) {
       const senderName = userCache[message.sender] || message.sender;
 
-      // Smart matching: check for partial name matches
-      let matchedClient = clients?.find((c) => {
-        const nameParts = c.name.toLowerCase().split(/\s+/);
-        const companyParts = (c.company || '').toLowerCase().split(/\s+/);
-        const contentLower = message.content.toLowerCase();
-        const senderLower = senderName.toLowerCase();
-        const channelLower = message.channel_name.toLowerCase();
+      // If only one client, use them. Otherwise try smart matching.
+      let matchedClient = singleClient;
 
-        // Check if any part of client name/company appears in message, sender, or channel
-        return nameParts.some((part: string) =>
-          part.length > 2 && (
-            contentLower.includes(part) ||
-            senderLower.includes(part) ||
-            channelLower.includes(part)
-          )
-        ) || companyParts.some((part: string) =>
-          part.length > 2 && (
-            contentLower.includes(part) ||
-            senderLower.includes(part) ||
-            channelLower.includes(part)
-          )
-        );
-      });
+      if (!matchedClient) {
+        // Smart matching: check for partial name matches
+        matchedClient = clients.find((c) => {
+          const nameParts = c.name.toLowerCase().split(/\s+/);
+          const companyParts = (c.company || '').toLowerCase().split(/\s+/);
+          const contentLower = message.content.toLowerCase();
+          const senderLower = senderName.toLowerCase();
+          const channelLower = message.channel_name.toLowerCase();
 
-      // If no match but only one client, assign to them
-      if (!matchedClient && defaultClient) {
-        matchedClient = defaultClient;
+          // Check if any part of client name/company appears in message, sender, or channel
+          return nameParts.some((part: string) =>
+            part.length > 2 && (
+              contentLower.includes(part) ||
+              senderLower.includes(part) ||
+              channelLower.includes(part)
+            )
+          ) || companyParts.some((part: string) =>
+            part.length > 2 && (
+              contentLower.includes(part) ||
+              senderLower.includes(part) ||
+              channelLower.includes(part)
+            )
+          );
+        });
       }
 
       // Store the message if we have a client to assign it to
@@ -176,11 +187,16 @@ export async function POST() {
           }
         );
 
-        if (!error) {
+        if (error) {
+          console.error('Failed to store message:', error.message);
+          errorCount++;
+        } else {
           storedCount++;
         }
       }
     }
+
+    console.log(`Sync complete: ${storedCount} stored, ${errorCount} errors out of ${allMessages.length} found`);
 
     // Update last sync time
     await supabase
