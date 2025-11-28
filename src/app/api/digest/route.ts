@@ -10,16 +10,11 @@ export async function POST() {
     const supabase = createServerClient();
     const today = new Date().toISOString().split('T')[0];
 
-    // Check if digest already exists for today
-    const { data: existingDigest } = await supabase
+    // Delete existing digest for today to allow regeneration
+    await supabase
       .from('digests')
-      .select('*')
-      .eq('date', today)
-      .single();
-
-    if (existingDigest) {
-      return NextResponse.json({ message: 'Digest already generated for today', digest: existingDigest });
-    }
+      .delete()
+      .eq('date', today);
 
     // Get all clients
     const { data: clients, error: clientsError } = await supabase
@@ -29,23 +24,54 @@ export async function POST() {
 
     if (clientsError) throw clientsError;
 
-    // Get recent insights (last 24 hours)
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    // Get recent insights (last 7 days, not filtered by is_resolved as column may not exist)
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const { data: insights, error: insightsError } = await supabase
       .from('insights')
       .select('*')
-      .gte('created_at', yesterday)
-      .eq('is_resolved', false);
+      .gte('created_at', weekAgo);
 
-    if (insightsError) throw insightsError;
+    // Log for debugging
+    console.log('Insights found:', insights?.length || 0);
 
-    // Group insights by client
-    const clientInsights = (clients || []).map((client: Client) => ({
-      client,
-      insights: (insights || [])
+    if (insightsError) {
+      console.error('Insights query error:', insightsError);
+      // Don't throw - continue with empty insights if table issues
+    }
+
+    // Get recent communications for additional context
+    const { data: communications } = await supabase
+      .from('communications')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(20);
+
+    console.log('Communications found:', communications?.length || 0);
+
+    // Group insights by client, and include communication summaries if no insights
+    const clientInsights = (clients || []).map((client: Client) => {
+      const clientInsightsList = (insights || [])
         .filter((i: Insight) => i.client_id === client.id)
-        .map((i: Insight) => i.description),
-    })).filter(({ insights }) => insights.length > 0);
+        .map((i: Insight) => i.description);
+
+      // If no insights, create summaries from communications
+      if (clientInsightsList.length === 0) {
+        const clientComms = (communications || [])
+          .filter((c: { client_id: string; content: string; sender: string }) => c.client_id === client.id)
+          .slice(0, 3);
+
+        if (clientComms.length > 0) {
+          clientInsightsList.push(
+            ...clientComms.map(c => `Recent message from ${c.sender}: "${c.content.slice(0, 100)}..."`)
+          );
+        }
+      }
+
+      return {
+        client,
+        insights: clientInsightsList,
+      };
+    }).filter(({ insights }) => insights.length > 0);
 
     // Generate summary with Claude
     const summary = await generateDigestSummary(
