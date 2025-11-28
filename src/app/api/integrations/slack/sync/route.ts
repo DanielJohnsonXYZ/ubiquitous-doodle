@@ -44,6 +44,13 @@ export async function POST() {
     }
 
     const channels = conversationsData.channels || [];
+
+    // Build channel name lookup
+    const channelNames: Record<string, string> = {};
+    for (const ch of channels) {
+      channelNames[ch.id] = ch.name || ch.id;
+    }
+
     const allMessages: Array<{
       source: 'slack';
       source_id: string;
@@ -51,6 +58,7 @@ export async function POST() {
       content: string;
       sender: string;
       timestamp: string;
+      channel_name: string;
     }> = [];
 
     // Fetch messages from each channel (last 7 days)
@@ -78,6 +86,7 @@ export async function POST() {
               content: msg.text,
               sender: msg.user || 'unknown',
               timestamp: new Date(parseFloat(msg.ts) * 1000).toISOString(),
+              channel_name: channel.name || 'dm',
             });
           }
         }
@@ -109,23 +118,55 @@ export async function POST() {
     // Get all clients to match messages
     const { data: clients } = await supabase.from('clients').select('id, email, name, company');
 
-    // Process and store messages
+    // If there's only one client, assign all messages to them
+    // Otherwise try smart matching
+    const defaultClient = clients?.length === 1 ? clients[0] : null;
+
+    let storedCount = 0;
+
+    // Process and store ALL messages
     for (const message of allMessages) {
       const senderName = userCache[message.sender] || message.sender;
 
-      // Match to client by name appearing in message or sender name
-      const matchedClient = clients?.find(
-        (c) =>
-          message.content.toLowerCase().includes(c.name.toLowerCase()) ||
-          message.content.toLowerCase().includes((c.company || '').toLowerCase()) ||
-          senderName.toLowerCase().includes(c.name.toLowerCase())
-      );
+      // Smart matching: check for partial name matches
+      let matchedClient = clients?.find((c) => {
+        const nameParts = c.name.toLowerCase().split(/\s+/);
+        const companyParts = (c.company || '').toLowerCase().split(/\s+/);
+        const contentLower = message.content.toLowerCase();
+        const senderLower = senderName.toLowerCase();
+        const channelLower = message.channel_name.toLowerCase();
 
+        // Check if any part of client name/company appears in message, sender, or channel
+        return nameParts.some(part =>
+          part.length > 2 && (
+            contentLower.includes(part) ||
+            senderLower.includes(part) ||
+            channelLower.includes(part)
+          )
+        ) || companyParts.some(part =>
+          part.length > 2 && (
+            contentLower.includes(part) ||
+            senderLower.includes(part) ||
+            channelLower.includes(part)
+          )
+        );
+      });
+
+      // If no match but only one client, assign to them
+      if (!matchedClient && defaultClient) {
+        matchedClient = defaultClient;
+      }
+
+      // Store the message if we have a client to assign it to
       if (matchedClient) {
-        await supabase.from('communications').upsert(
+        const { error } = await supabase.from('communications').upsert(
           {
-            ...message,
+            source: message.source,
+            source_id: message.source_id,
+            thread_id: message.thread_id,
+            content: message.content,
             sender: senderName,
+            timestamp: message.timestamp,
             client_id: matchedClient.id,
             analyzed: false,
           },
@@ -134,6 +175,10 @@ export async function POST() {
             ignoreDuplicates: true,
           }
         );
+
+        if (!error) {
+          storedCount++;
+        }
       }
     }
 
@@ -145,7 +190,8 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      synced: allMessages.length,
+      found: allMessages.length,
+      stored: storedCount,
       channels: channels.length,
     });
   } catch (err) {
