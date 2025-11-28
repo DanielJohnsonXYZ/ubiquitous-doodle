@@ -165,7 +165,7 @@ export async function POST() {
               channelLower.includes(part)
             )
           );
-        });
+        }) || null;
       }
 
       // Store the message if we have a client to assign it to
