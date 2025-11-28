@@ -165,12 +165,16 @@ function IntegrationsContent() {
     }
   };
 
-  const handleSync = async (integrationId: string) => {
+  const handleSync = async (integrationId: string, deep = false) => {
     setSyncing(integrationId);
     setMessage(null);
 
     try {
-      const response = await fetch(`/api/integrations/${integrationId}/sync`, {
+      const url = deep
+        ? `/api/integrations/${integrationId}/sync?deep=true`
+        : `/api/integrations/${integrationId}/sync`;
+
+      const response = await fetch(url, {
         method: 'POST',
       });
 
@@ -179,7 +183,8 @@ function IntegrationsContent() {
       if (response.ok) {
         const stored = data.stored ?? data.synced ?? 0;
         const found = data.found ?? stored;
-        setMessage({ type: 'success', text: `Synced ${stored} of ${found} messages from ${integrationId}` });
+        const syncType = deep ? 'Deep synced' : 'Synced';
+        setMessage({ type: 'success', text: `${syncType} ${stored} of ${found} messages from ${integrationId}` });
         fetchIntegrations(); // Refresh to get updated last_sync
       } else {
         setMessage({ type: 'error', text: data.error || 'Sync failed' });
@@ -306,7 +311,7 @@ function IntegrationsContent() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   {isConnected ? (
                     <>
                       <button
@@ -316,6 +321,14 @@ function IntegrationsContent() {
                       >
                         <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
                         {isSyncing ? 'Syncing...' : 'Sync Now'}
+                      </button>
+                      <button
+                        onClick={() => handleSync(config.id, true)}
+                        disabled={isSyncing}
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 disabled:opacity-50"
+                        title="Fetch last 90 days of messages"
+                      >
+                        Deep Sync
                       </button>
                       <button
                         onClick={() => handleDisconnect(config.id)}

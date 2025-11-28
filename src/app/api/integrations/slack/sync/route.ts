@@ -3,9 +3,13 @@ import { createServerClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const supabase = createServerClient();
+
+    // Check for deep sync parameter
+    const url = new URL(request.url);
+    const deepSync = url.searchParams.get('deep') === 'true';
 
     // Get Slack integration
     const { data: integration, error: integrationError } = await supabase
@@ -61,12 +65,17 @@ export async function POST() {
       channel_name: string;
     }> = [];
 
-    // Fetch messages from each channel (last 7 days)
-    const oneWeekAgo = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
+    // Fetch messages from each channel
+    // Deep sync: 90 days, Regular: 7 days
+    const timeRange = deepSync ? 90 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+    const oldestTime = Math.floor((Date.now() - timeRange) / 1000);
+    const messageLimit = deepSync ? 200 : 100;
 
-    for (const channel of channels.slice(0, 10)) { // Limit to 10 channels
+    console.log(`Sync mode: ${deepSync ? 'DEEP (90 days)' : 'Regular (7 days)'}`);
+
+    for (const channel of channels.slice(0, 25)) { // Increased to 25 channels
       const historyResponse = await fetch(
-        `https://slack.com/api/conversations.history?channel=${channel.id}&oldest=${oneWeekAgo}&limit=50`,
+        `https://slack.com/api/conversations.history?channel=${channel.id}&oldest=${oldestTime}&limit=${messageLimit}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
