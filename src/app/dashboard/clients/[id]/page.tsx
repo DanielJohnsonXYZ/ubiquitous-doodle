@@ -45,6 +45,7 @@ export default function ClientDetailPage() {
   const [communications, setCommunications] = useState<Communication[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -56,12 +57,15 @@ export default function ClientDetailPage() {
 
   const fetchClientData = async () => {
     try {
+      setError(null);
       const response = await fetch(`/api/clients/${clientId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch client data');
+      }
       const data = await response.json();
 
       if (data.error) {
-        console.error('Client not found:', data.error);
-        return;
+        throw new Error(data.error);
       }
 
       setClient(data.client);
@@ -69,6 +73,7 @@ export default function ClientDetailPage() {
       setInsights(data.insights || []);
     } catch (err) {
       console.error('Failed to fetch client:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load client');
     } finally {
       setLoading(false);
     }
@@ -126,7 +131,7 @@ export default function ClientDetailPage() {
     );
   }
 
-  if (!client) {
+  if (error || !client) {
     return (
       <div className="p-8">
         <Link
@@ -136,9 +141,26 @@ export default function ClientDetailPage() {
           <ArrowLeft className="h-4 w-4" />
           Back to Clients
         </Link>
-        <div className="bg-gray-50 rounded-xl p-12 text-center">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Client not found</h3>
-          <p className="text-gray-500">The client you&apos;re looking for doesn&apos;t exist.</p>
+        <div className={`rounded-xl p-12 text-center ${error ? 'bg-red-50 border border-red-200' : 'bg-gray-50'}`}>
+          <AlertTriangle className={`h-8 w-8 mx-auto mb-3 ${error ? 'text-red-500' : 'text-gray-400'}`} />
+          <h3 className={`text-lg font-semibold mb-2 ${error ? 'text-red-800' : 'text-gray-900'}`}>
+            {error ? 'Failed to Load Client' : 'Client not found'}
+          </h3>
+          <p className={error ? 'text-red-600 mb-4' : 'text-gray-500'}>
+            {error || "The client you're looking for doesn't exist."}
+          </p>
+          {error && (
+            <button
+              onClick={() => {
+                setLoading(true);
+                fetchClientData();
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 mx-auto"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Try Again
+            </button>
+          )}
         </div>
       </div>
     );

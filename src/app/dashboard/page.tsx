@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [insights, setInsights] = useState<(Insight & { clientName: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
@@ -26,10 +27,15 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
+      setError(null);
       const [clientsRes, insightsRes] = await Promise.all([
         fetch('/api/clients'),
         fetch('/api/insights'),
       ]);
+
+      if (!clientsRes.ok || !insightsRes.ok) {
+        throw new Error('Failed to fetch data');
+      }
 
       const clientsData = await clientsRes.json();
       const insightsData = await insightsRes.json();
@@ -38,6 +44,7 @@ export default function DashboardPage() {
       setInsights(insightsData.insights || []);
     } catch (err) {
       console.error('Failed to fetch data:', err);
+      setError('Failed to load dashboard data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -69,6 +76,26 @@ export default function DashboardPage() {
               <div key={i} className="h-24 bg-gray-200 rounded-xl"></div>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Failed to Load Dashboard</h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 mx-auto"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Try Again
+          </button>
         </div>
       </div>
     );

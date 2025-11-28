@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Mail, MessageSquare, FileText, Search, Filter } from 'lucide-react';
+import { Mail, MessageSquare, FileText, Search, Filter, AlertTriangle, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import type { Communication } from '@/types';
 
@@ -21,6 +21,7 @@ const sourceColors = {
 export default function CommunicationsPage() {
   const [communications, setCommunications] = useState<(Communication & { client_name: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
 
@@ -30,11 +31,19 @@ export default function CommunicationsPage() {
 
   const fetchCommunications = async () => {
     try {
+      setError(null);
       const response = await fetch('/api/communications');
+      if (!response.ok) {
+        throw new Error('Failed to fetch communications');
+      }
       const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
       setCommunications(data.communications || []);
     } catch (err) {
       console.error('Failed to fetch communications:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load communications');
     } finally {
       setLoading(false);
     }
@@ -60,6 +69,34 @@ export default function CommunicationsPage() {
               <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Communications</h1>
+          <p className="text-gray-500 mt-1">
+            All client communications across your connected platforms
+          </p>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Failed to Load Communications</h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => {
+              setLoading(true);
+              fetchCommunications();
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 mx-auto"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Try Again
+          </button>
         </div>
       </div>
     );
