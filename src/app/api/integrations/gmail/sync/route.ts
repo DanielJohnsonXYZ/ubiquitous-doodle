@@ -3,9 +3,13 @@ import { createServerClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const supabase = createServerClient();
+
+    // Check for deep sync parameter
+    const url = new URL(request.url);
+    const deepSync = url.searchParams.get('deep') === 'true';
 
     // Get Gmail integration
     const { data: integration, error: integrationError } = await supabase
@@ -53,9 +57,13 @@ export async function POST() {
       }
     }
 
-    // Fetch recent emails (last 7 days)
+    // Fetch emails - deep sync: 90 days, regular: 7 days
+    const timeQuery = deepSync ? 'newer_than:90d' : 'newer_than:7d';
+    const maxResults = deepSync ? 100 : 50;
+    console.log(`Gmail sync mode: ${deepSync ? 'DEEP (90 days)' : 'Regular (7 days)'}`);
+
     const messagesResponse = await fetch(
-      'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50&q=newer_than:7d',
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${timeQuery}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -113,19 +121,54 @@ export async function POST() {
     });
 
     // Get all clients to match emails
-    const { data: clients } = await supabase.from('clients').select('id, email, name');
+    const { data: clients } = await supabase.from('clients').select('id, email, name, company');
+
+    if (!clients || clients.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No clients found. Please add a client first.',
+        found: processedMessages.length,
+        stored: 0,
+      });
+    }
+
+    // If single client, assign all messages to them
+    const singleClient = clients.length === 1 ? clients[0] : null;
+    let storedCount = 0;
 
     // Match messages to clients and insert
     for (const message of processedMessages) {
-      // Simple email matching - in production, use more sophisticated matching
-      const matchedClient = clients?.find(
-        (c) =>
-          c.email &&
-          (message.sender?.includes(c.email) || message.recipient?.includes(c.email))
-      );
+      let matchedClient = singleClient;
+
+      if (!matchedClient) {
+        // First try email matching
+        matchedClient = clients.find(
+          (c) =>
+            c.email &&
+            (message.sender?.toLowerCase().includes(c.email.toLowerCase()) ||
+             message.recipient?.toLowerCase().includes(c.email.toLowerCase()))
+        ) || null;
+
+        // Then try name/company matching
+        if (!matchedClient) {
+          matchedClient = clients.find((c) => {
+            const nameParts = c.name.toLowerCase().split(/\s+/);
+            const companyParts = (c.company || '').toLowerCase().split(/\s+/);
+            const senderLower = (message.sender || '').toLowerCase();
+            const subjectLower = (message.subject || '').toLowerCase();
+            const contentLower = (message.content || '').toLowerCase().slice(0, 500);
+
+            return nameParts.some((part: string) =>
+              part.length > 2 && (senderLower.includes(part) || subjectLower.includes(part))
+            ) || companyParts.some((part: string) =>
+              part.length > 2 && (senderLower.includes(part) || subjectLower.includes(part) || contentLower.includes(part))
+            );
+          }) || null;
+        }
+      }
 
       if (matchedClient) {
-        await supabase.from('communications').upsert(
+        const { error } = await supabase.from('communications').upsert(
           {
             ...message,
             client_id: matchedClient.id,
@@ -136,6 +179,7 @@ export async function POST() {
             ignoreDuplicates: true,
           }
         );
+        if (!error) storedCount++;
       }
     }
 
@@ -147,7 +191,8 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      synced: processedMessages.length,
+      found: processedMessages.length,
+      stored: storedCount,
     });
   } catch (err) {
     console.error('Gmail sync error:', err);
