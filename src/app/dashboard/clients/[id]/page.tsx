@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -17,86 +17,6 @@ import {
 } from 'lucide-react';
 import InsightCard from '@/components/InsightCard';
 import type { Client, Communication, Insight } from '@/types';
-
-// Demo data
-const demoClient: Client = {
-  id: '1',
-  name: 'Dear Health',
-  company: 'Dear Health Inc.',
-  email: 'team@dearhealth.com',
-  status: 'healthy',
-  health_score: 85,
-  last_contact: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90).toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
-const demoCommunications: Communication[] = [
-  {
-    id: '1',
-    client_id: '1',
-    source: 'gmail',
-    source_id: 'msg1',
-    subject: 'Re: Project Update',
-    content: 'Thanks for the update! Really happy with how this is progressing. The new features look great and the team is excited to start testing next week.',
-    sender: 'team@dearhealth.com',
-    recipient: 'you@example.com',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    analyzed: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    client_id: '1',
-    source: 'slack',
-    source_id: 'msg2',
-    content: 'Quick question - can we schedule a call this week to discuss the Q2 roadmap?',
-    sender: 'Sarah @ Dear Health',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    analyzed: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    client_id: '1',
-    source: 'gmail',
-    source_id: 'msg3',
-    subject: 'Feedback on latest delivery',
-    content: 'Just wanted to share some feedback from our team. Everyone is impressed with the quality of the work. This is exactly what we were hoping for when we started this project.',
-    sender: 'team@dearhealth.com',
-    recipient: 'you@example.com',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-    analyzed: true,
-    created_at: new Date().toISOString(),
-  },
-];
-
-const demoInsights: Insight[] = [
-  {
-    id: '1',
-    client_id: '1',
-    type: 'sentiment',
-    severity: 'low',
-    title: 'Consistently positive sentiment',
-    description: 'Client has expressed satisfaction in 4 out of 5 recent communications. Relationship appears strong.',
-    evidence: ['Really happy with how this is progressing', 'This is exactly what we were hoping for'],
-    suggested_action: 'Request testimonial',
-    is_resolved: false,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    client_id: '1',
-    type: 'action_needed',
-    severity: 'medium',
-    title: 'Meeting request pending',
-    description: 'Client requested a call to discuss Q2 roadmap 2 days ago. No response sent yet.',
-    evidence: ['Can we schedule a call this week to discuss the Q2 roadmap?'],
-    suggested_action: 'Schedule call',
-    is_resolved: false,
-    created_at: new Date().toISOString(),
-  },
-];
 
 const sourceIcons = {
   gmail: Mail,
@@ -121,25 +41,111 @@ export default function ClientDetailPage() {
   const params = useParams();
   const clientId = params.id as string;
 
-  // In real app, fetch client data based on clientId
-  const [client] = useState<Client>(demoClient);
-  const [communications] = useState<Communication[]>(demoCommunications);
-  const [insights] = useState<Insight[]>(demoInsights);
+  const [client, setClient] = useState<Client | null>(null);
+  const [communications, setCommunications] = useState<Communication[]>([]);
+  const [insights, setInsights] = useState<Insight[]>([]);
+  const [loading, setLoading] = useState(true);
   const [draftMessage, setDraftMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const config = statusConfig[client.status];
-  const StatusIcon = config.icon;
+  useEffect(() => {
+    if (clientId) {
+      fetchClientData();
+    }
+  }, [clientId]);
+
+  const fetchClientData = async () => {
+    try {
+      const response = await fetch(`/api/clients/${clientId}`);
+      const data = await response.json();
+
+      if (data.error) {
+        console.error('Client not found:', data.error);
+        return;
+      }
+
+      setClient(data.client);
+      setCommunications(data.communications || []);
+      setInsights(data.insights || []);
+    } catch (err) {
+      console.error('Failed to fetch client:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGenerateMessage = async () => {
+    if (!client) return;
     setIsGenerating(true);
-    // TODO: Call Claude API to generate message
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setDraftMessage(
-      `Hi Sarah,\n\nThanks for reaching out! I'd love to discuss the Q2 roadmap with you. I have some availability Thursday afternoon or Friday morning - would either of those work?\n\nLooking forward to connecting.\n\nBest`
-    );
-    setIsGenerating(false);
+    try {
+      const response = await fetch('/api/generate-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: client.id,
+          clientName: client.name,
+          company: client.company,
+        }),
+      });
+      const data = await response.json();
+      if (data.message) {
+        setDraftMessage(data.message);
+      }
+    } catch (err) {
+      console.error('Failed to generate message:', err);
+    } finally {
+      setIsGenerating(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse">
+          <div className="h-4 w-32 bg-gray-200 rounded mb-8"></div>
+          <div className="flex items-center gap-4 mb-8">
+            <div className="h-16 w-16 bg-gray-200 rounded-xl"></div>
+            <div>
+              <div className="h-8 w-48 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 w-32 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-8">
+            <div className="col-span-2 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
+              ))}
+            </div>
+            <div className="space-y-4">
+              <div className="h-48 bg-gray-200 rounded-xl"></div>
+              <div className="h-32 bg-gray-200 rounded-xl"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="p-8">
+        <Link
+          href="/dashboard/clients"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Clients
+        </Link>
+        <div className="bg-gray-50 rounded-xl p-12 text-center">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Client not found</h3>
+          <p className="text-gray-500">The client you&apos;re looking for doesn&apos;t exist.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const config = statusConfig[client.status];
+  const StatusIcon = config.icon;
 
   return (
     <div className="p-8">
@@ -162,7 +168,7 @@ export default function ClientDetailPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
-              <p className="text-gray-500">{client.company}</p>
+              <p className="text-gray-500">{client.company || 'No company'}</p>
               <div className="flex items-center gap-3 mt-2">
                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${config.color}`}>
                   <StatusIcon className="h-3 w-3" />
@@ -198,34 +204,46 @@ export default function ClientDetailPage() {
         {/* Communications */}
         <div className="col-span-2">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Communications</h2>
-          <div className="space-y-4">
-            {communications.map((comm) => {
-              const SourceIcon = sourceIcons[comm.source];
-              return (
-                <div key={comm.id} className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-lg ${sourceColors[comm.source]}`}>
-                      <SourceIcon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-medium text-gray-900">{comm.sender}</span>
-                          {comm.subject && (
-                            <span className="text-gray-500 ml-2">• {comm.subject}</span>
-                          )}
-                        </div>
-                        <span className="text-xs text-gray-400">
-                          {formatDistanceToNow(new Date(comm.timestamp), { addSuffix: true })}
-                        </span>
+          {communications.length > 0 ? (
+            <div className="space-y-4">
+              {communications.map((comm) => {
+                const SourceIcon = sourceIcons[comm.source];
+                return (
+                  <div key={comm.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-lg ${sourceColors[comm.source]}`}>
+                        <SourceIcon className="h-4 w-4" />
                       </div>
-                      <p className="mt-2 text-sm text-gray-600">{comm.content}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-medium text-gray-900">{comm.sender}</span>
+                            {comm.subject && (
+                              <span className="text-gray-500 ml-2">• {comm.subject}</span>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-400">
+                            {formatDistanceToNow(new Date(comm.timestamp), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-gray-600">{comm.content}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-xl p-8 text-center">
+              <p className="text-gray-500">No communications synced for this client yet.</p>
+              <Link
+                href="/dashboard/integrations"
+                className="inline-block mt-4 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+              >
+                Sync Messages
+              </Link>
+            </div>
+          )}
 
           {/* Quick Reply */}
           <div className="mt-6 bg-white rounded-xl border border-gray-200 p-4">
@@ -252,7 +270,7 @@ export default function ClientDetailPage() {
                 className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50"
               >
                 <Send className="h-4 w-4" />
-                Send Message
+                Copy Message
               </button>
             </div>
           </div>
@@ -261,11 +279,17 @@ export default function ClientDetailPage() {
         {/* Insights Sidebar */}
         <div>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Insights</h2>
-          <div className="space-y-4">
-            {insights.map((insight) => (
-              <InsightCard key={insight.id} insight={insight} />
-            ))}
-          </div>
+          {insights.length > 0 ? (
+            <div className="space-y-4">
+              {insights.map((insight) => (
+                <InsightCard key={insight.id} insight={insight} />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-xl p-6 text-center">
+              <p className="text-gray-500 text-sm">No insights yet. Sync and analyze messages to generate insights.</p>
+            </div>
+          )}
 
           {/* Client Info */}
           <div className="mt-6 bg-white rounded-xl border border-gray-200 p-4">

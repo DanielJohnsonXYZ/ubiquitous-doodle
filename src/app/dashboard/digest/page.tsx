@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import Link from 'next/link';
 import {
   Mail,
   RefreshCw,
@@ -11,46 +12,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
-import type { DigestActionItem } from '@/types';
-
-// Demo data
-const demoDigest = {
-  id: '1',
-  date: new Date().toISOString().split('T')[0],
-  summary: `Good morning! Here's your relationship intelligence briefing for today.
-
-**Immediate Attention Needed:** Acme Corp's engagement has dropped significantly over the past two weeks. Their response times have doubled and the last message showed frustration about timeline delays. I recommend reaching out today with a proactive update.
-
-**Opportunity Alert:** TechStart mentioned expanding to 3 new markets and asked about scaling their current setup twice this week. This could be a significant expansion opportunity worth pursuing.
-
-**Overall Health:** Your client portfolio is in good shape with an average health score of 68%. Dear Health continues to show strong engagement with consistently positive sentiment.`,
-  at_risk_clients: ['2'],
-  opportunities: ['3'],
-  action_items: [
-    {
-      client_id: '2',
-      client_name: 'Acme Corp',
-      type: 'risk' as const,
-      reason: 'Response time doubled in past 2 weeks. Last message showed frustration about timeline delays.',
-      suggested_message: "Hi team, I wanted to reach out proactively about the project timeline. I understand there have been some delays and I want to make sure we're aligned on next steps. Do you have 15 minutes this week to discuss?",
-    },
-    {
-      client_id: '3',
-      client_name: 'TechStart',
-      type: 'opportunity' as const,
-      reason: 'Mentioned expanding to 3 new markets and asked about scaling current setup.',
-      suggested_message: "Hi! I noticed you mentioned expanding to new markets - that's exciting! I'd love to chat about how we can support your growth. Would you be open to a quick call to explore some options?",
-    },
-    {
-      client_id: '1',
-      client_name: 'Dear Health',
-      type: 'check_in' as const,
-      reason: 'Strong engagement - good opportunity to request testimonial or referral.',
-      suggested_message: "Hey! I've really enjoyed working together on this project. Your feedback has been great to hear. Would you be open to sharing a brief testimonial about your experience?",
-    },
-  ] as DigestActionItem[],
-  created_at: new Date().toISOString(),
-};
+import type { Digest, DigestActionItem } from '@/types';
 
 const typeConfig = {
   risk: {
@@ -74,15 +36,46 @@ const typeConfig = {
 };
 
 export default function DigestPage() {
-  const [digest] = useState(demoDigest);
+  const [digest, setDigest] = useState<Digest | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDigest();
+  }, []);
+
+  const fetchDigest = async () => {
+    try {
+      const response = await fetch('/api/digest');
+      const data = await response.json();
+      if (data.digest) {
+        setDigest(data.digest);
+      }
+    } catch (err) {
+      console.error('Failed to fetch digest:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGenerateDigest = async () => {
     setIsGenerating(true);
-    // TODO: Call /api/digest endpoint
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsGenerating(false);
+    setError(null);
+    try {
+      const response = await fetch('/api/digest', { method: 'POST' });
+      const data = await response.json();
+      if (data.error) {
+        setError(data.error);
+      } else if (data.digest) {
+        setDigest(data.digest);
+      }
+    } catch (err) {
+      setError('Failed to generate digest');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCopyMessage = (id: string, message: string) => {
@@ -90,6 +83,62 @@ export default function DigestPage() {
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
+
+  if (loading) {
+    return (
+      <div className="p-8 max-w-4xl">
+        <div className="animate-pulse">
+          <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
+          <div className="h-4 w-96 bg-gray-200 rounded mb-8"></div>
+          <div className="h-48 bg-gray-200 rounded-xl mb-6"></div>
+          <div className="h-32 bg-gray-200 rounded-xl"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!digest) {
+    return (
+      <div className="p-8 max-w-4xl">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Daily Digest</h1>
+            <p className="text-gray-500 mt-1">
+              Your AI-powered relationship intelligence briefing
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 rounded-xl p-12 text-center">
+          <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No digest yet</h3>
+          <p className="text-gray-500 mb-6 max-w-md mx-auto">
+            Generate your first daily digest to get AI-powered insights about your client relationships.
+            Make sure you have clients added and messages synced first.
+          </p>
+          {error && (
+            <p className="text-red-600 text-sm mb-4">{error}</p>
+          )}
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={handleGenerateDigest}
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
+              {isGenerating ? 'Generating...' : 'Generate Digest'}
+            </button>
+            <Link
+              href="/dashboard/clients"
+              className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+            >
+              Add Clients
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-4xl">
@@ -118,7 +167,7 @@ export default function DigestPage() {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-white">
-              Today's Digest
+              Today&apos;s Digest
             </h2>
             <p className="text-gray-400 text-sm">
               {format(new Date(digest.date), 'EEEE, MMMM d, yyyy')}
@@ -150,83 +199,67 @@ export default function DigestPage() {
       </div>
 
       {/* Action Items */}
-      <div className="mb-6">
-        <h3 className="font-semibold text-gray-900 mb-4">Action Items</h3>
-        <div className="space-y-4">
-          {digest.action_items.map((item, index) => {
-            const config = typeConfig[item.type];
-            const TypeIcon = config.icon;
+      {digest.action_items.length > 0 && (
+        <div className="mb-6">
+          <h3 className="font-semibold text-gray-900 mb-4">Action Items</h3>
+          <div className="space-y-4">
+            {digest.action_items.map((item: DigestActionItem, index: number) => {
+              const config = typeConfig[item.type];
+              const TypeIcon = config.icon;
 
-            return (
-              <div
-                key={index}
-                className="bg-white rounded-xl border border-gray-200 p-5"
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
-                    <TypeIcon className={`h-5 w-5 ${config.iconColor}`} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-gray-900">
-                        {item.client_name}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium border ${config.color}`}>
-                        {config.label}
-                      </span>
+              return (
+                <div
+                  key={index}
+                  className="bg-white rounded-xl border border-gray-200 p-5"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
+                      <TypeIcon className={`h-5 w-5 ${config.iconColor}`} />
                     </div>
-                    <p className="text-sm text-gray-600 mb-4">{item.reason}</p>
-
-                    {item.suggested_message && (
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-gray-500 uppercase">
-                            Suggested Message
-                          </span>
-                          <button
-                            onClick={() => handleCopyMessage(item.client_id, item.suggested_message!)}
-                            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                          >
-                            {copiedId === item.client_id ? 'Copied!' : 'Copy'}
-                          </button>
-                        </div>
-                        <p className="text-sm text-gray-700">{item.suggested_message}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-gray-900">
+                          {item.client_name}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium border ${config.color}`}>
+                          {config.label}
+                        </span>
                       </div>
-                    )}
+                      <p className="text-sm text-gray-600 mb-4">{item.reason}</p>
 
-                    <div className="flex items-center gap-4 mt-4">
-                      <button className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                        View Client <ChevronRight className="h-4 w-4" />
-                      </button>
-                      <button className="text-sm font-medium text-gray-500 hover:text-gray-700">
-                        Dismiss
-                      </button>
+                      {item.suggested_message && (
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-gray-500 uppercase">
+                              Suggested Message
+                            </span>
+                            <button
+                              onClick={() => handleCopyMessage(item.client_id, item.suggested_message!)}
+                              className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                            >
+                              {copiedId === item.client_id ? 'Copied!' : 'Copy'}
+                            </button>
+                          </div>
+                          <p className="text-sm text-gray-700">{item.suggested_message}</p>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-4 mt-4">
+                        <Link
+                          href={`/dashboard/clients/${item.client_id}`}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                        >
+                          View Client <ChevronRight className="h-4 w-4" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
-
-      {/* Email Settings */}
-      <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
-        <h3 className="font-semibold text-blue-900 mb-2">Email Delivery</h3>
-        <p className="text-sm text-blue-800 mb-4">
-          Get this digest delivered to your inbox every morning at 8:00 AM.
-        </p>
-        <div className="flex items-center gap-4">
-          <input
-            type="email"
-            placeholder="your@email.com"
-            className="flex-1 px-4 py-2 border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-          />
-          <button className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700">
-            Enable
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Mail, MessageSquare, FileText, Search, Filter } from 'lucide-react';
+import Link from 'next/link';
 import type { Communication } from '@/types';
 
 const sourceIcons = {
@@ -17,66 +18,27 @@ const sourceColors = {
   notion: 'bg-gray-100 text-gray-600',
 };
 
-// Demo data
-const demoCommunications: (Communication & { client_name: string })[] = [
-  {
-    id: '1',
-    client_id: '1',
-    client_name: 'Dear Health',
-    source: 'gmail',
-    source_id: 'msg1',
-    subject: 'Re: Project Update',
-    content: 'Thanks for the update! Really happy with how this is progressing. The new features look great and the team is excited to start testing next week.',
-    sender: 'team@dearhealth.com',
-    recipient: 'you@example.com',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    analyzed: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    client_id: '1',
-    client_name: 'Dear Health',
-    source: 'slack',
-    source_id: 'msg2',
-    content: 'Quick question - can we schedule a call this week to discuss the Q2 roadmap?',
-    sender: 'Sarah @ Dear Health',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    analyzed: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    client_id: '2',
-    client_name: 'Acme Corp',
-    source: 'gmail',
-    source_id: 'msg3',
-    subject: 'Timeline concerns',
-    content: "I'm a bit concerned about where we're at with the timeline. Can we get an update on when this will be resolved? We were expecting delivery last week.",
-    sender: 'pm@acme.com',
-    recipient: 'you@example.com',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-    analyzed: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    client_id: '3',
-    client_name: 'TechStart',
-    source: 'slack',
-    source_id: 'msg4',
-    content: "We're looking at expanding into APAC next quarter. What would it take to scale what we have now? Would love to chat about options.",
-    sender: 'CEO @ TechStart',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 96).toISOString(),
-    analyzed: true,
-    created_at: new Date().toISOString(),
-  },
-];
-
 export default function CommunicationsPage() {
-  const [communications] = useState(demoCommunications);
+  const [communications, setCommunications] = useState<(Communication & { client_name: string })[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+
+  useEffect(() => {
+    fetchCommunications();
+  }, []);
+
+  const fetchCommunications = async () => {
+    try {
+      const response = await fetch('/api/communications');
+      const data = await response.json();
+      setCommunications(data.communications || []);
+    } catch (err) {
+      console.error('Failed to fetch communications:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredCommunications = communications.filter((comm) => {
     const matchesSearch =
@@ -86,6 +48,22 @@ export default function CommunicationsPage() {
     const matchesSource = sourceFilter === 'all' || comm.source === sourceFilter;
     return matchesSearch && matchesSource;
   });
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse">
+          <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
+          <div className="h-4 w-96 bg-gray-200 rounded mb-8"></div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -124,55 +102,64 @@ export default function CommunicationsPage() {
       </div>
 
       {/* Communications List */}
-      <div className="space-y-4">
-        {filteredCommunications.map((comm) => {
-          const SourceIcon = sourceIcons[comm.source];
-          return (
-            <div
-              key={comm.id}
-              className="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 transition-colors"
-            >
-              <div className="flex items-start gap-4">
-                <div className={`p-2 rounded-lg ${sourceColors[comm.source]}`}>
-                  <SourceIcon className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{comm.sender}</span>
-                      <span className="text-gray-400">→</span>
-                      <span className="text-sm text-blue-600 font-medium">
-                        {comm.client_name}
+      {filteredCommunications.length > 0 ? (
+        <div className="space-y-4">
+          {filteredCommunications.map((comm) => {
+            const SourceIcon = sourceIcons[comm.source];
+            return (
+              <div
+                key={comm.id}
+                className="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 transition-colors"
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`p-2 rounded-lg ${sourceColors[comm.source]}`}>
+                    <SourceIcon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900">{comm.sender}</span>
+                        <span className="text-gray-400">→</span>
+                        <span className="text-sm text-blue-600 font-medium">
+                          {comm.client_name}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-400">
+                        {formatDistanceToNow(new Date(comm.timestamp), { addSuffix: true })}
                       </span>
                     </div>
-                    <span className="text-xs text-gray-400">
-                      {formatDistanceToNow(new Date(comm.timestamp), { addSuffix: true })}
-                    </span>
-                  </div>
-                  {comm.subject && (
-                    <p className="text-sm font-medium text-gray-700 mb-1">{comm.subject}</p>
-                  )}
-                  <p className="text-sm text-gray-600 line-clamp-2">{comm.content}</p>
-                  <div className="flex items-center gap-4 mt-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                      comm.analyzed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {comm.analyzed ? 'Analyzed' : 'Pending'}
-                    </span>
-                    <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-                      View Details
-                    </button>
+                    {comm.subject && (
+                      <p className="text-sm font-medium text-gray-700 mb-1">{comm.subject}</p>
+                    )}
+                    <p className="text-sm text-gray-600 line-clamp-2">{comm.content}</p>
+                    <div className="flex items-center gap-4 mt-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        comm.analyzed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {comm.analyzed ? 'Analyzed' : 'Pending'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {filteredCommunications.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No communications found</p>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-gray-50 rounded-xl">
+          <p className="text-gray-500 mb-4">
+            {communications.length === 0
+              ? 'No communications yet. Connect Slack and sync to see messages here.'
+              : 'No communications match your search.'}
+          </p>
+          {communications.length === 0 && (
+            <Link
+              href="/dashboard/integrations"
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+            >
+              Connect Slack
+            </Link>
+          )}
         </div>
       )}
     </div>
