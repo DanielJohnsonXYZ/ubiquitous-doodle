@@ -10,47 +10,26 @@ export async function analyzeConversation(
   client: Client,
   recentHistory: Communication[] = []
 ): Promise<AnalysisResult> {
+  // Limit history to reduce tokens - summarize instead of full content
   const historyContext = recentHistory
-    .slice(0, 5)
-    .map(c => `[${c.timestamp}] ${c.sender}: ${c.content.slice(0, 500)}`)
-    .join('\n\n');
+    .slice(0, 3)
+    .map(c => `${c.sender}: ${c.content.slice(0, 150)}...`)
+    .join('\n');
 
-  const prompt = `You are an AI relationship intelligence analyst. Analyze the following client communication and provide insights.
+  const prompt = `Analyze this client communication. Client: ${client.name} (${client.company || 'Unknown'}), Status: ${client.status}, Score: ${client.health_score}/100
 
-CLIENT CONTEXT:
-- Name: ${client.name}
-- Company: ${client.company || 'Unknown'}
-- Current Status: ${client.status}
-- Health Score: ${client.health_score}/100
+Recent context:
+${historyContext || 'None'}
 
-RECENT COMMUNICATION HISTORY:
-${historyContext || 'No recent history available'}
+New message from ${communication.sender} via ${communication.source}:
+${communication.content.slice(0, 1000)}
 
-NEW COMMUNICATION TO ANALYZE:
-Source: ${communication.source}
-Subject: ${communication.subject || 'N/A'}
-From: ${communication.sender}
-Date: ${communication.timestamp}
-
-Content:
-${communication.content}
-
----
-
-Analyze this communication and respond with a JSON object containing:
-1. sentiment: "positive", "neutral", or "negative"
-2. sentiment_score: number from -1 (very negative) to 1 (very positive)
-3. risk_signals: array of specific risk indicators found (e.g., "delayed response mentioned", "frustration with timeline", "considering alternatives")
-4. opportunity_signals: array of potential opportunities (e.g., "mentioned expansion", "asked about additional services", "positive feedback")
-5. key_topics: array of main topics discussed
-6. urgency: "low", "medium", or "high" based on how quickly this needs attention
-7. suggested_response: a brief suggested response if action is needed (in a warm, professional tone)
-
-Respond ONLY with valid JSON, no other text.`;
+Return JSON only:
+{"sentiment":"positive|neutral|negative","sentiment_score":-1 to 1,"risk_signals":[],"opportunity_signals":[],"key_topics":[],"urgency":"low|medium|high","suggested_response":"brief reply if needed"}`;
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
+    max_tokens: 400,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -80,25 +59,20 @@ export async function generateDigestSummary(
 ): Promise<string> {
   const clientSummaries = recentInsights
     .map(({ client, insights }) =>
-      `${client.name} (${client.status}, score: ${client.health_score}): ${insights.join('; ')}`
+      `${client.name} (${client.status}, ${client.health_score}%): ${insights.slice(0, 3).join('; ')}`
     )
     .join('\n');
 
-  const prompt = `You are an AI Chief of Staff providing a morning briefing. Based on the following client relationship data, write a concise, actionable summary (2-3 paragraphs max).
+  const prompt = `Morning briefing for client relationships. Write 2-3 concise paragraphs.
 
-CLIENT SUMMARIES:
-${clientSummaries}
+Clients:
+${clientSummaries || 'No client data available'}
 
-Write a brief executive summary that:
-1. Highlights the most urgent items needing attention
-2. Notes any opportunities to pursue
-3. Gives a general health overview of the client portfolio
-
-Be direct, specific, and actionable. Use a professional but warm tone.`;
+Cover: 1) Urgent items needing attention 2) Opportunities 3) Portfolio health overview. Be direct and actionable.`;
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 500,
+    max_tokens: 350,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -115,23 +89,13 @@ export async function generateOutreachMessage(
   context: string,
   tone: 'warm' | 'professional' | 'casual' = 'professional'
 ): Promise<string> {
-  const prompt = `Write a brief outreach message to a client based on the following context.
-
-CLIENT: ${client.name} at ${client.company || 'their company'}
-CONTEXT: ${context}
-TONE: ${tone}
-
-Write a short, genuine message (2-4 sentences) that:
-- Feels personal, not templated
-- Addresses the specific context
-- Has a clear purpose or call to action
-- Sounds like a real person, not AI
-
-Just provide the message text, nothing else.`;
+  const prompt = `Write a ${tone} 2-3 sentence message to ${client.name} at ${client.company || 'their company'}.
+Context: ${context.slice(0, 300)}
+Be genuine, specific, include a call to action. Message only, no quotes.`;
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 300,
+    max_tokens: 150,
     messages: [{ role: 'user', content: prompt }],
   });
 

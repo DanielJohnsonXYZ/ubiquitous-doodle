@@ -33,6 +33,29 @@ export async function POST() {
       clientMap[c.id] = c;
     });
 
+    // Pre-fetch recent history for all relevant clients (fixes N+1 query)
+    const clientIds = Array.from(new Set(communications.map(c => c.client_id)));
+    const commIds = communications.map(c => c.id);
+
+    const { data: allHistory } = await supabase
+      .from('communications')
+      .select('*')
+      .in('client_id', clientIds)
+      .not('id', 'in', `(${commIds.join(',')})`)
+      .order('timestamp', { ascending: false })
+      .limit(50); // Get enough for all clients
+
+    // Group history by client_id
+    const historyByClient: Record<string, Communication[]> = {};
+    (allHistory || []).forEach((h: Communication) => {
+      if (!historyByClient[h.client_id]) {
+        historyByClient[h.client_id] = [];
+      }
+      if (historyByClient[h.client_id].length < 3) {
+        historyByClient[h.client_id].push(h);
+      }
+    });
+
     const results = [];
 
     for (const comm of communications) {
@@ -43,14 +66,8 @@ export async function POST() {
         continue;
       }
 
-      // Get recent history for context
-      const { data: history } = await supabase
-        .from('communications')
-        .select('*')
-        .eq('client_id', client.id)
-        .neq('id', comm.id)
-        .order('timestamp', { ascending: false })
-        .limit(5);
+      // Use pre-fetched history
+      const history = historyByClient[client.id] || [];
 
       // Analyze with Claude
       const analysis = await analyzeConversation(
@@ -78,7 +95,7 @@ export async function POST() {
           title: 'Risk signal detected',
           description: analysis.risk_signals.join('. '),
           evidence: [comm.content.slice(0, 200)],
-          suggested_action: 'Review and respond',
+          suggested_action: analysis.suggested_response || 'Review and respond promptly',
         });
       }
 
@@ -91,7 +108,7 @@ export async function POST() {
           title: 'Opportunity detected',
           description: analysis.opportunity_signals.join('. '),
           evidence: [comm.content.slice(0, 200)],
-          suggested_action: 'Follow up',
+          suggested_action: analysis.suggested_response || 'Follow up to explore further',
         });
       }
 
@@ -99,9 +116,9 @@ export async function POST() {
       const sentimentImpact = Math.round(analysis.sentiment_score * 10);
       const newScore = Math.max(0, Math.min(100, client.health_score + sentimentImpact));
 
-      // Determine new status
+      // Determine new status - use OR logic for at_risk
       let newStatus = client.status;
-      if (analysis.risk_signals.length > 0 && analysis.urgency === 'high') {
+      if (analysis.risk_signals.length > 0 || analysis.urgency === 'high') {
         newStatus = 'at_risk';
       } else if (analysis.opportunity_signals.length > 0) {
         newStatus = 'opportunity';

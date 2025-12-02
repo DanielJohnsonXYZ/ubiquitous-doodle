@@ -88,7 +88,7 @@ export async function POST() {
       .filter((c: Client) => c.status === 'opportunity')
       .map((c: Client) => c.id);
 
-    // Create action items
+    // Create action items from insights
     const actionItems = (insights || [])
       .filter((i: Insight) => i.type === 'risk' || i.type === 'action_needed')
       .slice(0, 5)
@@ -99,7 +99,7 @@ export async function POST() {
           client_name: client?.name || 'Unknown',
           type: i.type === 'risk' ? 'risk' : 'check_in',
           reason: i.description,
-          suggested_message: i.suggested_message,
+          suggested_message: i.suggested_action, // Use suggested_action from insights table
         };
       });
 
