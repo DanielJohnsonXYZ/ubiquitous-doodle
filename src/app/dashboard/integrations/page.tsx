@@ -92,15 +92,18 @@ function IntegrationsContent() {
   // Handle URL params from OAuth callback
   useEffect(() => {
     const success = searchParams.get('success');
-    const error = searchParams.get('error');
+    const errorParam = searchParams.get('error');
 
     if (success) {
       setMessage({ type: 'success', text: `${success.charAt(0).toUpperCase() + success.slice(1)} connected successfully!` });
-      fetchIntegrations(); // Refresh data after successful connection
-      // Clear URL params
+      // Clear URL params first
       window.history.replaceState({}, '', '/dashboard/integrations');
-    } else if (error) {
-      setMessage({ type: 'error', text: `Connection failed: ${error}` });
+      // Fetch immediately and retry after delay to handle race conditions
+      fetchIntegrations();
+      const timer = setTimeout(() => fetchIntegrations(), 1000);
+      return () => clearTimeout(timer);
+    } else if (errorParam) {
+      setMessage({ type: 'error', text: `Connection failed: ${errorParam}` });
       window.history.replaceState({}, '', '/dashboard/integrations');
     }
   }, [searchParams]);
