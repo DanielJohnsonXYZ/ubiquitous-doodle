@@ -11,11 +11,21 @@ export async function DELETE(
     const { type } = params;
     const supabase = createServerClient();
 
-    // Delete the integration from database
-    const { error } = await supabase
-      .from('integrations')
-      .delete()
-      .eq('type', type);
+    // Check for specific account ID (for multi-account support)
+    const url = new URL(request.url);
+    const accountId = url.searchParams.get('id');
+
+    let query = supabase.from('integrations').delete();
+
+    if (accountId) {
+      // Delete specific account by ID
+      query = query.eq('id', accountId);
+    } else {
+      // Delete all accounts of this type (backwards compatible)
+      query = query.eq('type', type);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error('Failed to delete integration:', error);

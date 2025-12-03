@@ -74,10 +74,11 @@ function IntegrationsLoading() {
 
 function IntegrationsContent() {
   const searchParams = useSearchParams();
-  const [integrations, setIntegrations] = useState<Record<string, IntegrationData | null>>({
-    gmail: null,
-    slack: null,
-    notion: null,
+  // Support multiple accounts per type
+  const [integrations, setIntegrations] = useState<Record<string, IntegrationData[]>>({
+    gmail: [],
+    slack: [],
+    notion: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,14 +123,17 @@ function IntegrationsContent() {
       }
 
       if (data.integrations) {
-        const integrationsMap: Record<string, IntegrationData | null> = {
-          gmail: null,
-          slack: null,
-          notion: null,
+        // Group integrations by type (supports multiple accounts)
+        const integrationsMap: Record<string, IntegrationData[]> = {
+          gmail: [],
+          slack: [],
+          notion: [],
         };
 
         for (const integration of data.integrations) {
-          integrationsMap[integration.type] = integration;
+          if (integrationsMap[integration.type]) {
+            integrationsMap[integration.type].push(integration);
+          }
         }
 
         setIntegrations(integrationsMap);
@@ -152,15 +156,19 @@ function IntegrationsContent() {
     window.location.href = oauthUrls[integrationId] || '#';
   };
 
-  const handleDisconnect = async (integrationId: string) => {
+  const handleDisconnect = async (integrationId: string, accountId?: string) => {
     try {
-      const response = await fetch(`/api/integrations/${integrationId}`, {
+      const url = accountId
+        ? `/api/integrations/${integrationId}?id=${accountId}`
+        : `/api/integrations/${integrationId}`;
+      const response = await fetch(url, {
         method: 'DELETE',
       });
 
       if (response.ok) {
-        setIntegrations((prev) => ({ ...prev, [integrationId]: null }));
-        setMessage({ type: 'success', text: `${integrationId} disconnected` });
+        // Refresh integrations after disconnect
+        fetchIntegrations();
+        setMessage({ type: 'success', text: `Account disconnected` });
       }
     } catch (err) {
       console.error('Failed to disconnect:', err);
@@ -274,16 +282,18 @@ function IntegrationsContent() {
       <div className="grid gap-6">
         {integrationConfigs.map((config) => {
           const Icon = config.icon;
-          const integration = integrations[config.id];
-          const isConnected = !!integration;
+          const accounts = integrations[config.id] || [];
+          const hasAccounts = accounts.length > 0;
           const isSyncing = syncing === config.id;
+          const supportsMultiple = config.id === 'gmail'; // Only Gmail supports multiple accounts for now
 
           return (
             <div
               key={config.id}
               className="bg-white rounded-xl border border-gray-200 p-6"
             >
-              <div className="flex items-start justify-between">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start gap-4">
                   <div className={`p-3 rounded-xl ${config.bgColor}`}>
                     <Icon className={`h-6 w-6 ${config.color}`} />
@@ -293,64 +303,73 @@ function IntegrationsContent() {
                       <h3 className="text-lg font-semibold text-gray-900">
                         {config.name}
                       </h3>
-                      {isConnected && (
+                      {hasAccounts && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                           <CheckCircle className="h-3 w-3" />
-                          Connected
+                          {accounts.length} Connected
                         </span>
                       )}
                     </div>
                     <p className="text-gray-500 mt-1">{config.description}</p>
-                    {isConnected && integration.last_sync && (
-                      <p className="text-xs text-gray-400 mt-2">
-                        Last synced: {new Date(integration.last_sync).toLocaleString()}
-                      </p>
-                    )}
-                    {isConnected && !integration.last_sync && (
-                      <p className="text-xs text-gray-400 mt-2">
-                        Connected {new Date(integration.connected_at).toLocaleString()} - Not synced yet
-                      </p>
-                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {isConnected ? (
-                    <>
-                      <button
-                        onClick={() => handleSync(config.id)}
-                        disabled={isSyncing}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                        {isSyncing ? 'Syncing...' : 'Sync Now'}
-                      </button>
-                      <button
-                        onClick={() => handleSync(config.id, true)}
-                        disabled={isSyncing}
-                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 disabled:opacity-50"
-                        title="Fetch last 90 days of messages"
-                      >
-                        Deep Sync
-                      </button>
-                      <button
-                        onClick={() => handleDisconnect(config.id)}
-                        className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg"
-                      >
-                        Disconnect
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => handleConnect(config.id)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800"
-                    >
-                      Connect
-                      <ExternalLink className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
+                {/* Add account button */}
+                <button
+                  onClick={() => handleConnect(config.id)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800"
+                >
+                  {hasAccounts && supportsMultiple ? 'Add Account' : 'Connect'}
+                  <ExternalLink className="h-4 w-4" />
+                </button>
               </div>
+
+              {/* Connected accounts list */}
+              {hasAccounts && (
+                <div className="space-y-3 mt-4 pt-4 border-t border-gray-100">
+                  {accounts.map((account) => (
+                    <div key={account.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {account.metadata?.email || account.metadata?.name || 'Connected Account'}
+                        </p>
+                        {account.last_sync ? (
+                          <p className="text-xs text-gray-500">
+                            Last synced: {new Date(account.last_sync).toLocaleString()}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-500">
+                            Connected {new Date(account.connected_at).toLocaleString()} - Not synced yet
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSync(config.id)}
+                          disabled={isSyncing}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                        >
+                          <RefreshCw className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                          {isSyncing ? 'Syncing...' : 'Sync'}
+                        </button>
+                        <button
+                          onClick={() => handleSync(config.id, true)}
+                          disabled={isSyncing}
+                          className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 disabled:opacity-50"
+                        >
+                          Deep
+                        </button>
+                        <button
+                          onClick={() => handleDisconnect(config.id, account.id)}
+                          className="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

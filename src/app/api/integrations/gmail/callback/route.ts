@@ -55,29 +55,55 @@ export async function GET(request: NextRequest) {
 
     const userInfo = await userResponse.json();
 
-    // Save to Supabase
+    // Save to Supabase - support multiple accounts by using email as identifier
     const supabase = createServerClient();
 
-    const { error: dbError } = await supabase
+    // Check if this email account already exists
+    const { data: existing } = await supabase
       .from('integrations')
-      .upsert({
-        type: 'gmail',
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expires_at: tokens.expires_in
-          ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
-          : null,
-        metadata: {
-          email: userInfo.email,
-          name: userInfo.name,
-        },
-        connected_at: new Date().toISOString(),
-      }, {
-        onConflict: 'type',
-      });
+      .select('id')
+      .eq('type', 'gmail')
+      .eq('metadata->>email', userInfo.email)
+      .single();
 
-    if (dbError) {
-      throw dbError;
+    if (existing) {
+      // Update existing account
+      const { error: dbError } = await supabase
+        .from('integrations')
+        .update({
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token || undefined,
+          expires_at: tokens.expires_in
+            ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+            : null,
+          metadata: {
+            email: userInfo.email,
+            name: userInfo.name,
+          },
+          connected_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+
+      if (dbError) throw dbError;
+    } else {
+      // Insert new account
+      const { error: dbError } = await supabase
+        .from('integrations')
+        .insert({
+          type: 'gmail',
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          expires_at: tokens.expires_in
+            ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+            : null,
+          metadata: {
+            email: userInfo.email,
+            name: userInfo.name,
+          },
+          connected_at: new Date().toISOString(),
+        });
+
+      if (dbError) throw dbError;
     }
 
     return NextResponse.redirect(
