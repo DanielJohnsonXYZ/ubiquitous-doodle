@@ -16,20 +16,34 @@ export async function analyzeConversation(
     .map(c => `${c.sender}: ${c.content.slice(0, 150)}...`)
     .join('\n');
 
-  const prompt = `Analyze this client communication. Client: ${client.name} (${client.company || 'Unknown'}), Status: ${client.status}, Score: ${client.health_score}/100
+  const prompt = `Analyze this client communication for relationship intelligence.
 
-Recent context:
+Client: ${client.name} (${client.company || 'Unknown'}), Status: ${client.status}, Health: ${client.health_score}/100
+
+Recent history:
 ${historyContext || 'None'}
 
 New message from ${communication.sender} via ${communication.source}:
 ${communication.content.slice(0, 1000)}
 
-Return JSON only:
-{"sentiment":"positive|neutral|negative","sentiment_score":-1 to 1,"risk_signals":[],"opportunity_signals":[],"key_topics":[],"urgency":"low|medium|high","suggested_response":"brief reply if needed"}`;
+Return JSON:
+{
+  "sentiment": "positive|neutral|negative",
+  "sentiment_score": -1 to 1,
+  "risk_signals": ["specific concern with context"],
+  "opportunity_signals": ["specific opportunity with context"],
+  "key_topics": ["topic1", "topic2"],
+  "urgency": "low|medium|high",
+  "suggested_response": "specific personalized reply",
+  "insight_title": "Brief specific title like 'Client frustrated with timeline delays' or 'Expansion interest in Q1'",
+  "action_type": "respond|schedule_call|send_resource|monitor|celebrate"
+}
+
+Be specific - not "frustrated" but "frustrated about delayed deliverable". Include names/dates mentioned.`;
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 400,
+    max_tokens: 450,
     messages: [{ role: 'user', content: prompt }],
   });
 

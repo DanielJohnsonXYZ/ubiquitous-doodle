@@ -78,4 +78,6 @@ export interface AnalysisResult {
   key_topics: string[];
   urgency: 'low' | 'medium' | 'high';
   suggested_response?: string;
+  insight_title?: string; // Specific, actionable title
+  action_type?: 'respond' | 'schedule_call' | 'send_resource' | 'monitor' | 'celebrate';
 }
