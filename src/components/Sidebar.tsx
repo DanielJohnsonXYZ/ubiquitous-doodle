@@ -9,12 +9,14 @@ import {
   Settings,
   Zap,
   Mail,
+  FileText,
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Clients', href: '/dashboard/clients', icon: Users },
   { name: 'Communications', href: '/dashboard/communications', icon: MessageSquare },
+  { name: 'Add Notes', href: '/dashboard/notes', icon: FileText },
   { name: 'Digest', href: '/dashboard/digest', icon: Mail },
   { name: 'Integrations', href: '/dashboard/integrations', icon: Zap },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },

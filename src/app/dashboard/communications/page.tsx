@@ -2,20 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { Mail, MessageSquare, FileText, Search, Filter, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Mail, MessageSquare, FileText, Search, Filter, AlertTriangle, RefreshCw, Mic, PenLine } from 'lucide-react';
 import Link from 'next/link';
 import type { Communication } from '@/types';
 
-const sourceIcons = {
+const sourceIcons: Record<string, typeof Mail> = {
   gmail: Mail,
   slack: MessageSquare,
   notion: FileText,
+  transcript: Mic,
+  manual: PenLine,
 };
 
-const sourceColors = {
+const sourceColors: Record<string, string> = {
   gmail: 'bg-red-100 text-red-600',
   slack: 'bg-purple-100 text-purple-600',
   notion: 'bg-gray-100 text-gray-600',
+  transcript: 'bg-amber-100 text-amber-600',
+  manual: 'bg-green-100 text-green-600',
 };
 
 export default function CommunicationsPage() {

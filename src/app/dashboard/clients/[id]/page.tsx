@@ -14,20 +14,26 @@ import {
   AlertTriangle,
   TrendingUp,
   CheckCircle,
+  Mic,
+  PenLine,
 } from 'lucide-react';
 import InsightCard from '@/components/InsightCard';
 import type { Client, Communication, Insight } from '@/types';
 
-const sourceIcons = {
+const sourceIcons: Record<string, typeof Mail> = {
   gmail: Mail,
   slack: MessageSquare,
   notion: FileText,
+  transcript: Mic,
+  manual: PenLine,
 };
 
-const sourceColors = {
+const sourceColors: Record<string, string> = {
   gmail: 'bg-red-100 text-red-600',
   slack: 'bg-purple-100 text-purple-600',
   notion: 'bg-gray-100 text-gray-600',
+  transcript: 'bg-amber-100 text-amber-600',
+  manual: 'bg-green-100 text-green-600',
 };
 
 const statusConfig = {
