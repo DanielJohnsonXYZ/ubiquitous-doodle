@@ -16,6 +16,11 @@ import {
   CheckCircle,
   Mic,
   PenLine,
+  Edit3,
+  X,
+  DollarSign,
+  Calendar,
+  Target,
 } from 'lucide-react';
 import InsightCard from '@/components/InsightCard';
 import type { Client, Communication, Insight } from '@/types';
@@ -54,6 +59,16 @@ export default function ClientDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    contract_value: '',
+    contract_type: 'monthly' as 'monthly' | 'annual' | 'project',
+    renewal_date: '',
+    project_status: '',
+    goals: '',
+    known_concerns: '',
+  });
 
   useEffect(() => {
     if (clientId) {
@@ -106,6 +121,53 @@ export default function ClientDetailPage() {
       console.error('Failed to generate message:', err);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const openEditModal = () => {
+    if (client) {
+      setEditForm({
+        contract_value: client.contract_value?.toString() || '',
+        contract_type: client.contract_type || 'monthly',
+        renewal_date: client.renewal_date || '',
+        project_status: client.project_status || '',
+        goals: client.goals || '',
+        known_concerns: client.known_concerns?.join(', ') || '',
+      });
+      setShowEditModal(true);
+    }
+  };
+
+  const handleSaveClient = async () => {
+    if (!client) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/clients/${client.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contract_value: editForm.contract_value ? parseFloat(editForm.contract_value) : null,
+          contract_type: editForm.contract_type,
+          renewal_date: editForm.renewal_date || null,
+          project_status: editForm.project_status || null,
+          goals: editForm.goals || null,
+          known_concerns: editForm.known_concerns
+            ? editForm.known_concerns.split(',').map(s => s.trim()).filter(Boolean)
+            : null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update client');
+      }
+
+      const data = await response.json();
+      setClient(data.client);
+      setShowEditModal(false);
+    } catch (err) {
+      console.error('Failed to save client:', err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -209,24 +271,160 @@ export default function ClientDetailPage() {
             </div>
           </div>
 
-          <div className="text-right">
-            <div className="text-3xl font-bold text-gray-900">{client.health_score}%</div>
-            <div className="text-sm text-gray-500">Health Score</div>
-            <div className="mt-2 w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${
-                  client.health_score >= 70
-                    ? 'bg-green-500'
-                    : client.health_score >= 40
-                    ? 'bg-yellow-500'
-                    : 'bg-red-500'
-                }`}
-                style={{ width: `${client.health_score}%` }}
-              />
+          <div className="flex items-start gap-4">
+            <button
+              onClick={openEditModal}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Edit3 className="h-4 w-4" />
+              Edit Details
+            </button>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-gray-900">{client.health_score}%</div>
+              <div className="text-sm text-gray-500">Health Score</div>
+              <div className="mt-2 w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${
+                    client.health_score >= 70
+                      ? 'bg-green-500'
+                      : client.health_score >= 40
+                      ? 'bg-yellow-500'
+                      : 'bg-red-500'
+                  }`}
+                  style={{ width: `${client.health_score}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Edit Client Details</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-gray-500 bg-blue-50 p-3 rounded-lg">
+                Adding business context helps generate more valuable, specific insights.
+              </p>
+
+              {/* Contract Value */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <DollarSign className="h-4 w-4 inline mr-1" />
+                    Contract Value
+                  </label>
+                  <input
+                    type="number"
+                    value={editForm.contract_value}
+                    onChange={(e) => setEditForm({ ...editForm, contract_value: e.target.value })}
+                    placeholder="e.g., 5000"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Contract Type
+                  </label>
+                  <select
+                    value={editForm.contract_type}
+                    onChange={(e) => setEditForm({ ...editForm, contract_type: e.target.value as 'monthly' | 'annual' | 'project' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="annual">Annual</option>
+                    <option value="project">Project-based</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Renewal Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Calendar className="h-4 w-4 inline mr-1" />
+                  Renewal Date
+                </label>
+                <input
+                  type="date"
+                  value={editForm.renewal_date}
+                  onChange={(e) => setEditForm({ ...editForm, renewal_date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Project Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Current Project / Status
+                </label>
+                <input
+                  type="text"
+                  value={editForm.project_status}
+                  onChange={(e) => setEditForm({ ...editForm, project_status: e.target.value })}
+                  placeholder="e.g., Phase 2 - Dashboard development"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Goals */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Target className="h-4 w-4 inline mr-1" />
+                  Client Goals
+                </label>
+                <textarea
+                  value={editForm.goals}
+                  onChange={(e) => setEditForm({ ...editForm, goals: e.target.value })}
+                  placeholder="What does success look like for this client?"
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Known Concerns */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Known Concerns (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={editForm.known_concerns}
+                  onChange={(e) => setEditForm({ ...editForm, known_concerns: e.target.value })}
+                  placeholder="e.g., Timeline delays, Budget constraints"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveClient}
+                disabled={isSaving}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-8">
         {/* Communications */}
@@ -334,10 +532,52 @@ export default function ClientDetailPage() {
                 </dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Total Messages</dt>
+                <dt className="text-gray-500">Messages</dt>
                 <dd className="text-gray-900">{communications.length}</dd>
               </div>
+              {client.contract_value && (
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Contract</dt>
+                  <dd className="text-gray-900 font-medium">
+                    ${client.contract_value.toLocaleString()}/{client.contract_type || 'mo'}
+                  </dd>
+                </div>
+              )}
+              {client.renewal_date && (
+                <div className="flex justify-between">
+                  <dt className="text-gray-500">Renewal</dt>
+                  <dd className="text-gray-900">{format(new Date(client.renewal_date), 'MMM d, yyyy')}</dd>
+                </div>
+              )}
             </dl>
+            {(client.project_status || client.goals || (client.known_concerns && client.known_concerns.length > 0)) && (
+              <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                {client.project_status && (
+                  <div>
+                    <dt className="text-xs text-gray-500 mb-1">Project</dt>
+                    <dd className="text-sm text-gray-900">{client.project_status}</dd>
+                  </div>
+                )}
+                {client.goals && (
+                  <div>
+                    <dt className="text-xs text-gray-500 mb-1">Goals</dt>
+                    <dd className="text-sm text-gray-900">{client.goals}</dd>
+                  </div>
+                )}
+                {client.known_concerns && client.known_concerns.length > 0 && (
+                  <div>
+                    <dt className="text-xs text-gray-500 mb-1">Concerns</dt>
+                    <dd className="flex flex-wrap gap-1">
+                      {client.known_concerns.map((concern, idx) => (
+                        <span key={idx} className="bg-red-50 text-red-700 text-xs px-2 py-0.5 rounded">
+                          {concern}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
