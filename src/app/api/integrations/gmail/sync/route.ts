@@ -61,18 +61,22 @@ export async function POST(request: Request) {
         });
 
         const tokens = await refreshResponse.json();
-        if (refreshResponse.ok) {
-          accessToken = tokens.access_token;
-
-          // Update token in database
-          await supabase
-            .from('integrations')
-            .update({
-              access_token: tokens.access_token,
-              expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-            })
-            .eq('id', integration.id);
+        if (!refreshResponse.ok) {
+          console.error(`Failed to refresh Gmail token for ${integration.metadata?.email}:`, tokens.error);
+          // Skip this account if refresh fails - don't use expired token
+          continue;
         }
+
+        accessToken = tokens.access_token;
+
+        // Update token in database
+        await supabase
+          .from('integrations')
+          .update({
+            access_token: tokens.access_token,
+            expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          })
+          .eq('id', integration.id);
       }
 
       // Fetch emails - deep sync: 90 days, regular: 7 days

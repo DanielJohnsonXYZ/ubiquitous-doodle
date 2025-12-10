@@ -53,7 +53,16 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    if (!userResponse.ok) {
+      throw new Error('Failed to fetch user info from Google');
+    }
+
     const userInfo = await userResponse.json();
+
+    // Validate required fields
+    if (!userInfo.email || typeof userInfo.email !== 'string') {
+      throw new Error('Invalid user info: missing email');
+    }
 
     // Save to Supabase - support multiple accounts by using email as identifier
     const supabase = createServerClient();

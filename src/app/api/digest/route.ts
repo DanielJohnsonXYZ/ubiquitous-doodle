@@ -48,18 +48,33 @@ export async function POST() {
 
     console.log('Communications found:', communications?.length || 0);
 
-    // Group insights by client, and include communication summaries if no insights
+    // Pre-group insights by client_id for O(1) lookups instead of O(n*m)
+    const insightsByClient: Record<string, string[]> = {};
+    (insights || []).forEach((i: Insight) => {
+      if (!insightsByClient[i.client_id]) {
+        insightsByClient[i.client_id] = [];
+      }
+      insightsByClient[i.client_id].push(i.description);
+    });
+
+    // Pre-group communications by client_id
+    const commsByClient: Record<string, Array<{ sender: string; content: string }>> = {};
+    (communications || []).forEach((c: { client_id: string; content: string; sender: string }) => {
+      if (!commsByClient[c.client_id]) {
+        commsByClient[c.client_id] = [];
+      }
+      if (commsByClient[c.client_id].length < 3) {
+        commsByClient[c.client_id].push({ sender: c.sender, content: c.content });
+      }
+    });
+
+    // Build client insights using pre-grouped data (O(n) instead of O(n*m))
     const clientInsights = (clients || []).map((client: Client) => {
-      const clientInsightsList = (insights || [])
-        .filter((i: Insight) => i.client_id === client.id)
-        .map((i: Insight) => i.description);
+      const clientInsightsList = insightsByClient[client.id] || [];
 
       // If no insights, create summaries from communications
       if (clientInsightsList.length === 0) {
-        const clientComms = (communications || [])
-          .filter((c: { client_id: string; content: string; sender: string }) => c.client_id === client.id)
-          .slice(0, 3);
-
+        const clientComms = commsByClient[client.id] || [];
         if (clientComms.length > 0) {
           clientInsightsList.push(
             ...clientComms.map(c => `Recent message from ${c.sender}: "${c.content.slice(0, 100)}..."`)

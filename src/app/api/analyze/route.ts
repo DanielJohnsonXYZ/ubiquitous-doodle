@@ -37,13 +37,36 @@ export async function POST() {
     const clientIds = Array.from(new Set(communications.map(c => c.client_id)));
     const commIds = communications.map(c => c.id);
 
-    const { data: allHistory } = await supabase
+    // Build query - handle empty commIds to avoid SQL error
+    let historyQuery = supabase
       .from('communications')
       .select('*')
       .in('client_id', clientIds)
-      .not('id', 'in', `(${commIds.join(',')})`)
+      .eq('analyzed', true)
       .order('timestamp', { ascending: false })
-      .limit(50); // Get enough for all clients
+      .limit(50);
+
+    // Only exclude current comms if we have IDs to exclude
+    if (commIds.length > 0) {
+      historyQuery = historyQuery.not('id', 'in', `(${commIds.join(',')})`);
+    }
+
+    const { data: allHistory } = await historyQuery;
+
+    // Also fetch cached analysis for sentiment trend calculation
+    const historyIds = (allHistory || []).map((h: Communication) => h.id);
+    let cachedAnalysis: Record<string, number> = {};
+
+    if (historyIds.length > 0) {
+      const { data: analysisData } = await supabase
+        .from('analysis_cache')
+        .select('communication_id, sentiment_score')
+        .in('communication_id', historyIds);
+
+      (analysisData || []).forEach((a: { communication_id: string; sentiment_score: number }) => {
+        cachedAnalysis[a.communication_id] = a.sentiment_score;
+      });
+    }
 
     // Group history by client_id
     const historyByClient: Record<string, Communication[]> = {};
@@ -85,14 +108,18 @@ export async function POST() {
         onConflict: 'communication_id',
       });
 
-      // Calculate sentiment trend from history
+      // Calculate sentiment trend from cached historical analysis
       let sentimentTrend = 'stable';
       if (history.length > 0) {
-        // Compare current sentiment with recent average (if we had cached analysis)
-        const recentSentiments = history.map(() => 0); // Default neutral
-        const avgRecent = recentSentiments.reduce((a, b) => a + b, 0) / recentSentiments.length;
-        if (analysis.sentiment_score > avgRecent + 0.3) sentimentTrend = 'improving';
-        else if (analysis.sentiment_score < avgRecent - 0.3) sentimentTrend = 'declining';
+        const recentSentiments = history
+          .map(h => cachedAnalysis[h.id])
+          .filter((s): s is number => s !== undefined);
+
+        if (recentSentiments.length > 0) {
+          const avgRecent = recentSentiments.reduce((a, b) => a + b, 0) / recentSentiments.length;
+          if (analysis.sentiment_score > avgRecent + 0.3) sentimentTrend = 'improving';
+          else if (analysis.sentiment_score < avgRecent - 0.3) sentimentTrend = 'declining';
+        }
       }
 
       // Create insights with specific titles from Claude

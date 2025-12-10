@@ -16,16 +16,47 @@ export async function POST(request: Request) {
       attendees
     } = body;
 
-    if (!client_id || !content) {
+    // Validate required fields
+    if (!client_id || typeof client_id !== 'string' || !client_id.trim()) {
       return NextResponse.json(
-        { error: 'client_id and content are required' },
+        { error: 'Valid client_id is required' },
         { status: 400 }
       );
     }
 
-    if (content.length < 50) {
+    if (!content || typeof content !== 'string') {
       return NextResponse.json(
-        { error: 'Content too short. Please provide more context.' },
+        { error: 'Content is required and must be a string' },
+        { status: 400 }
+      );
+    }
+
+    const trimmedContent = content.trim();
+    if (trimmedContent.length < 50) {
+      return NextResponse.json(
+        { error: 'Content too short. Please provide at least 50 characters.' },
+        { status: 400 }
+      );
+    }
+
+    if (trimmedContent.length > 100000) {
+      return NextResponse.json(
+        { error: 'Content too long. Maximum 100,000 characters allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate optional fields
+    if (title && typeof title !== 'string') {
+      return NextResponse.json(
+        { error: 'Title must be a string' },
+        { status: 400 }
+      );
+    }
+
+    if (attendees && !Array.isArray(attendees)) {
+      return NextResponse.json(
+        { error: 'Attendees must be an array' },
         { status: 400 }
       );
     }
