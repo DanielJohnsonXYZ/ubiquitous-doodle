@@ -12,7 +12,10 @@ import {
 } from 'lucide-react';
 import ClientCard from '@/components/ClientCard';
 import InsightCard from '@/components/InsightCard';
+import OnboardingFlow from '@/components/OnboardingFlow';
 import type { Client, Insight } from '@/types';
+
+const ONBOARDING_COMPLETE_KEY = 'ri_onboarding_complete';
 
 export default function DashboardPage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -20,10 +23,21 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Check if onboarding should be shown after data loads
+  useEffect(() => {
+    if (!loading && clients.length === 0) {
+      const onboardingComplete = localStorage.getItem(ONBOARDING_COMPLETE_KEY);
+      if (!onboardingComplete) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [loading, clients.length]);
 
   const fetchData = async () => {
     try {
@@ -48,6 +62,49 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOnboardingComplete = async (data: {
+    businessType: string;
+    clientCount: string;
+    primaryGoal: string;
+    firstClient: { name: string; company: string; email: string };
+  }) => {
+    // Save onboarding preferences (could be saved to user settings)
+    localStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+    localStorage.setItem('ri_user_preferences', JSON.stringify({
+      businessType: data.businessType,
+      clientCount: data.clientCount,
+      primaryGoal: data.primaryGoal,
+    }));
+
+    // Create the first client
+    if (data.firstClient.name) {
+      try {
+        const response = await fetch('/api/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: data.firstClient.name,
+            company: data.firstClient.company,
+            email: data.firstClient.email,
+          }),
+        });
+
+        if (response.ok) {
+          await fetchData(); // Refresh to show new client
+        }
+      } catch (err) {
+        console.error('Failed to create client:', err);
+      }
+    }
+
+    setShowOnboarding(false);
+  };
+
+  const handleOnboardingSkip = () => {
+    localStorage.setItem(ONBOARDING_COMPLETE_KEY, 'true');
+    setShowOnboarding(false);
   };
 
   const handleRefresh = async () => {
@@ -103,6 +160,14 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 pt-16 lg:p-8 lg:pt-8">
+      {/* Onboarding Flow */}
+      {showOnboarding && (
+        <OnboardingFlow
+          onComplete={handleOnboardingComplete}
+          onSkip={handleOnboardingSkip}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
