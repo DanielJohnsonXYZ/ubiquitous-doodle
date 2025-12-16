@@ -380,13 +380,35 @@ function IntegrationsContent() {
         <h3 className="text-lg font-semibold text-blue-900 mb-2">Setup Guide</h3>
         <div className="text-sm text-blue-800 space-y-2">
           <p>
-            <strong>1. Connect Slack:</strong> Add the RelIntel app to your workspace and authorize access to read messages.
+            <strong>1. Connect Gmail:</strong> Connect your Google account to sync email conversations with clients.
           </p>
           <p>
             <strong>2. Add your clients:</strong> Go to Clients page and add your client names so messages can be matched.
           </p>
           <p>
-            <strong>3. Sync messages:</strong> Click "Sync Now" to pull in recent messages and analyze them.
+            <strong>3. Sync messages:</strong> Click &ldquo;Sync&rdquo; to pull in recent messages and analyze them.
+          </p>
+        </div>
+      </div>
+
+      {/* Gmail Configuration Guide */}
+      <div className="mt-6 bg-amber-50 rounded-xl p-6 border border-amber-100">
+        <h3 className="text-lg font-semibold text-amber-900 mb-2">Gmail Configuration</h3>
+        <div className="text-sm text-amber-800 space-y-3">
+          <p>
+            <strong>Multiple Gmail accounts:</strong> You can connect multiple Gmail or Google Workspace accounts. Each account can sync emails independently.
+          </p>
+          <p>
+            <strong>To add a new domain for Gmail OAuth:</strong>
+          </p>
+          <ol className="list-decimal ml-5 space-y-1">
+            <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-900">Google Cloud Console</a></li>
+            <li>Select your OAuth 2.0 Client ID</li>
+            <li>Under &ldquo;Authorized redirect URIs&rdquo;, add: <code className="bg-amber-100 px-1 rounded">https://yourdomain.com/api/integrations/gmail/callback</code></li>
+            <li>Update NEXT_PUBLIC_APP_URL in your environment to match the new domain</li>
+          </ol>
+          <p className="text-amber-700 mt-2">
+            <strong>Note:</strong> For Google Workspace domains, ensure your organization admin has approved the app.
           </p>
         </div>
       </div>
