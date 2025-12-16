@@ -116,15 +116,15 @@ export default function NotesPage() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Add Notes & Transcripts</h1>
-        <p className="text-gray-500 mt-1">
+    <div className="p-4 pt-16 lg:p-8 lg:pt-8 max-w-6xl mx-auto">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Add Notes & Transcripts</h1>
+        <p className="text-gray-500 mt-1 text-sm lg:text-base">
           Paste meeting notes, call transcripts, or any client communication for AI analysis
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Input Section */}
         <div className="space-y-4">
           {/* Client Selection */}
@@ -151,7 +151,7 @@ export default function NotesPage() {
           </div>
 
           {/* Optional Fields */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Title (optional)
@@ -271,7 +271,7 @@ Sarah: Actually, that's what concerns me. The team is worried we might slip..."
           )}
 
           {analysis && (
-            <div className="space-y-4 overflow-y-auto max-h-[800px] pr-2">
+            <div className="space-y-4 overflow-y-auto max-h-[600px] lg:max-h-[800px] pr-2">
               {/* Executive Summary */}
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
                 <h3 className="font-semibold text-gray-900 mb-2">Summary</h3>
@@ -388,7 +388,7 @@ Sarah: Actually, that's what concerns me. The team is worried we might slip..."
                   <Users className="h-4 w-4" />
                   Relationship Status
                 </h3>
-                <div className="grid grid-cols-3 gap-4 text-center mb-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center mb-3">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Trust</p>
                     <p className={`font-medium ${
@@ -421,7 +421,7 @@ Sarah: Actually, that's what concerns me. The team is worried we might slip..."
                   </div>
                 </div>
                 {(analysis.relationship.warning_signs?.length || analysis.relationship.positive_signs?.length) && (
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     {analysis.relationship.warning_signs?.length ? (
                       <div>
                         <p className="text-xs text-red-600 font-medium mb-1">Warning Signs</p>

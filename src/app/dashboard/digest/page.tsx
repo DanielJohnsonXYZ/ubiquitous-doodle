@@ -98,10 +98,10 @@ export default function DigestPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-4xl">
+      <div className="p-4 pt-16 lg:p-8 lg:pt-8 max-w-4xl">
         <div className="animate-pulse">
           <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
-          <div className="h-4 w-96 bg-gray-200 rounded mb-8"></div>
+          <div className="h-4 w-64 lg:w-96 bg-gray-200 rounded mb-8"></div>
           <div className="h-48 bg-gray-200 rounded-xl mb-6"></div>
           <div className="h-32 bg-gray-200 rounded-xl"></div>
         </div>
@@ -111,11 +111,11 @@ export default function DigestPage() {
 
   if (!digest) {
     return (
-      <div className="p-8 max-w-4xl">
-        <div className="flex items-center justify-between mb-8">
+      <div className="p-4 pt-16 lg:p-8 lg:pt-8 max-w-4xl">
+        <div className="mb-6 lg:mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Daily Digest</h1>
-            <p className="text-gray-500 mt-1">
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Daily Digest</h1>
+            <p className="text-gray-500 mt-1 text-sm lg:text-base">
               Your AI-powered relationship intelligence briefing
             </p>
           </div>
@@ -155,11 +155,11 @@ export default function DigestPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 pt-16 lg:p-8 lg:pt-8 max-w-4xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Daily Digest</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Daily Digest</h1>
+          <p className="text-gray-500 mt-1 text-sm lg:text-base">
             Your AI-powered relationship intelligence briefing
           </p>
         </div>
@@ -188,7 +188,7 @@ export default function DigestPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-4 text-sm">
+        <div className="flex flex-wrap gap-3 sm:gap-4 text-sm">
           <div className="flex items-center gap-2 text-red-400">
             <AlertTriangle className="h-4 w-4" />
             <span>{digest.at_risk_clients.length} at risk</span>

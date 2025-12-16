@@ -52,11 +52,11 @@ export default function ClientsPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 pt-16 lg:p-8 lg:pt-8">
         <div className="animate-pulse">
           <div className="h-8 w-32 bg-gray-200 rounded mb-4"></div>
           <div className="h-4 w-64 bg-gray-200 rounded mb-8"></div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-48 bg-gray-200 rounded-xl"></div>
             ))}
@@ -68,8 +68,8 @@ export default function ClientsPage() {
 
   if (error) {
     return (
-      <div className="p-8">
-        <div className="flex items-center justify-between mb-8">
+      <div className="p-4 pt-16 lg:p-8 lg:pt-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
             <p className="text-gray-500 mt-1">Manage and monitor your client relationships</p>
@@ -95,11 +95,11 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 pt-16 lg:p-8 lg:pt-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-          <p className="text-gray-500 mt-1">Manage and monitor your client relationships</p>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Clients</h1>
+          <p className="text-gray-500 mt-1 text-sm lg:text-base">Manage and monitor your client relationships</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -111,8 +111,8 @@ export default function ClientsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-6">
+        <div className="relative flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
@@ -137,7 +137,7 @@ export default function ClientsPage() {
 
       {/* Client Grid */}
       {filteredClients.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredClients.map((client) => (
             <ClientCard key={client.id} client={client} />
           ))}

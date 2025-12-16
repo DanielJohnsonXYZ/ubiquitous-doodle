@@ -173,7 +173,7 @@ export default function ClientDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 pt-16 lg:p-8 lg:pt-8">
         <div className="animate-pulse">
           <div className="h-4 w-32 bg-gray-200 rounded mb-8"></div>
           <div className="flex items-center gap-4 mb-8">
@@ -183,8 +183,8 @@ export default function ClientDetailPage() {
               <div className="h-4 w-32 bg-gray-200 rounded"></div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-8">
-            <div className="col-span-2 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            <div className="lg:col-span-2 space-y-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
               ))}
@@ -201,7 +201,7 @@ export default function ClientDetailPage() {
 
   if (error || !client) {
     return (
-      <div className="p-8">
+      <div className="p-4 pt-16 lg:p-8 lg:pt-8">
         <Link
           href="/dashboard/clients"
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-4"
@@ -238,9 +238,9 @@ export default function ClientDetailPage() {
   const StatusIcon = config.icon;
 
   return (
-    <div className="p-8">
+    <div className="p-4 pt-16 lg:p-8 lg:pt-8">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 lg:mb-8">
         <Link
           href="/dashboard/clients"
           className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 mb-4"
@@ -249,15 +249,15 @@ export default function ClientDetailPage() {
           Back to Clients
         </Link>
 
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <span className="text-2xl font-bold text-white">
+            <div className="h-12 w-12 lg:h-16 lg:w-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <span className="text-xl lg:text-2xl font-bold text-white">
                 {client.name.charAt(0)}
               </span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{client.name}</h1>
               <p className="text-gray-500">{client.company || 'No company'}</p>
               <div className="flex items-center gap-3 mt-2">
                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${config.color}`}>
@@ -426,9 +426,9 @@ export default function ClientDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Communications */}
-        <div className="col-span-2">
+        <div className="lg:col-span-2 order-2 lg:order-1">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Communications</h2>
           {communications.length > 0 ? (
             <div className="space-y-4">
@@ -503,7 +503,7 @@ export default function ClientDetailPage() {
         </div>
 
         {/* Insights Sidebar */}
-        <div>
+        <div className="order-1 lg:order-2">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Insights</h2>
           {insights.length > 0 ? (
             <div className="space-y-4">

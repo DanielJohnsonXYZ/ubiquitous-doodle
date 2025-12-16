@@ -64,10 +64,10 @@ export default function CommunicationsPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 pt-16 lg:p-8 lg:pt-8">
         <div className="animate-pulse">
           <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
-          <div className="h-4 w-96 bg-gray-200 rounded mb-8"></div>
+          <div className="h-4 w-64 lg:w-96 bg-gray-200 rounded mb-8"></div>
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
@@ -80,10 +80,10 @@ export default function CommunicationsPage() {
 
   if (error) {
     return (
-      <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Communications</h1>
-          <p className="text-gray-500 mt-1">
+      <div className="p-4 pt-16 lg:p-8 lg:pt-8">
+        <div className="mb-6 lg:mb-8">
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Communications</h1>
+          <p className="text-gray-500 mt-1 text-sm lg:text-base">
             All client communications across your connected platforms
           </p>
         </div>
@@ -107,17 +107,17 @@ export default function CommunicationsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Communications</h1>
-        <p className="text-gray-500 mt-1">
+    <div className="p-4 pt-16 lg:p-8 lg:pt-8">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Communications</h1>
+        <p className="text-gray-500 mt-1 text-sm lg:text-base">
           All client communications across your connected platforms
         </p>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-6">
+        <div className="relative flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"

@@ -58,10 +58,10 @@ export default function IntegrationsPage() {
 
 function IntegrationsLoading() {
   return (
-    <div className="p-8">
+    <div className="p-4 pt-16 lg:p-8 lg:pt-8">
       <div className="animate-pulse">
         <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
-        <div className="h-4 w-96 bg-gray-200 rounded mb-8"></div>
+        <div className="h-4 w-64 lg:w-96 bg-gray-200 rounded mb-8"></div>
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
@@ -210,10 +210,10 @@ function IntegrationsContent() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 pt-16 lg:p-8 lg:pt-8">
         <div className="animate-pulse">
           <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
-          <div className="h-4 w-96 bg-gray-200 rounded mb-8"></div>
+          <div className="h-4 w-64 lg:w-96 bg-gray-200 rounded mb-8"></div>
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
@@ -226,9 +226,9 @@ function IntegrationsContent() {
 
   if (error) {
     return (
-      <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Integrations</h1>
+      <div className="p-4 pt-16 lg:p-8 lg:pt-8">
+        <div className="mb-6 lg:mb-8">
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Integrations</h1>
           <p className="text-gray-500 mt-1">
             Connect your communication tools to start monitoring client relationships
           </p>
@@ -253,10 +253,10 @@ function IntegrationsContent() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Integrations</h1>
-        <p className="text-gray-500 mt-1">
+    <div className="p-4 pt-16 lg:p-8 lg:pt-8">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Integrations</h1>
+        <p className="text-gray-500 mt-1 text-sm lg:text-base">
           Connect your communication tools to start monitoring client relationships
         </p>
       </div>
@@ -293,14 +293,14 @@ function IntegrationsContent() {
               className="bg-white rounded-xl border border-gray-200 p-6"
             >
               {/* Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-xl ${config.bgColor}`}>
-                    <Icon className={`h-6 w-6 ${config.color}`} />
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className={`p-2 sm:p-3 rounded-xl ${config.bgColor}`}>
+                    <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${config.color}`} />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                         {config.name}
                       </h3>
                       {hasAccounts && (
@@ -328,9 +328,9 @@ function IntegrationsContent() {
               {hasAccounts && (
                 <div className="space-y-3 mt-4 pt-4 border-t border-gray-100">
                   {accounts.map((account) => (
-                    <div key={account.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
+                    <div key={account.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50 rounded-lg p-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">
                           {account.metadata?.email || account.metadata?.name || 'Connected Account'}
                         </p>
                         {account.last_sync ? (
@@ -343,7 +343,7 @@ function IntegrationsContent() {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           onClick={() => handleSync(config.id)}
                           disabled={isSyncing}

@@ -23,10 +23,10 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-8 max-w-3xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500 mt-1">Configure your relationship intelligence preferences</p>
+    <div className="p-4 pt-16 lg:p-8 lg:pt-8 max-w-3xl">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Settings</h1>
+        <p className="text-gray-500 mt-1 text-sm lg:text-base">Configure your relationship intelligence preferences</p>
       </div>
 
       <div className="space-y-8">

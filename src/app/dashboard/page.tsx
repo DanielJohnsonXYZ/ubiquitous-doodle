@@ -102,17 +102,17 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 pt-16 lg:p-8 lg:pt-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Your client relationship overview</p>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-500 mt-1 text-sm lg:text-base">Your client relationship overview</p>
         </div>
         <button
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           Refresh
@@ -120,7 +120,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6 lg:mb-8">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-blue-100">
@@ -188,7 +188,7 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Clients */}
           <div>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Clients</h2>
