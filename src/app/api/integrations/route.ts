@@ -15,7 +15,15 @@ export async function GET() {
       throw error;
     }
 
-    return NextResponse.json({ integrations: integrations || [] });
+    return NextResponse.json(
+      { integrations: integrations || [] },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      }
+    );
   } catch (err) {
     console.error('Failed to fetch integrations:', err);
     return NextResponse.json(

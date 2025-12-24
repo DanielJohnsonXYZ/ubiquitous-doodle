@@ -112,7 +112,8 @@ function IntegrationsContent() {
   const fetchIntegrations = async () => {
     try {
       setError(null);
-      const response = await fetch('/api/integrations');
+      // Add timestamp to prevent caching
+      const response = await fetch(`/api/integrations?t=${Date.now()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch integrations');
       }
