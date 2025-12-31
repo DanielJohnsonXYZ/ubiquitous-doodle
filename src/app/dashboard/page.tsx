@@ -26,11 +26,14 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const { isDemo } = useAuth();
+  const { isDemo, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    fetchData();
-  }, [isDemo]);
+    // Wait for auth to be ready before fetching
+    if (!authLoading) {
+      fetchData();
+    }
+  }, [isDemo, authLoading]);
 
   // Check if onboarding should be shown after data loads (not in demo mode)
   useEffect(() => {

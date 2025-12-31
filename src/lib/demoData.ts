@@ -10,8 +10,9 @@ export const demoClients: Client[] = [
     email: 'sarah@techventures.com',
     status: 'healthy',
     health_score: 85,
-    last_contact: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    last_contact: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'demo-2',
@@ -20,8 +21,9 @@ export const demoClients: Client[] = [
     email: 'michael@growthlabs.io',
     status: 'at_risk',
     health_score: 42,
-    last_contact: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days ago
+    last_contact: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
     created_at: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'demo-3',
@@ -30,8 +32,9 @@ export const demoClients: Client[] = [
     email: 'emily@startupstudio.co',
     status: 'opportunity',
     health_score: 78,
-    last_contact: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+    last_contact: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'demo-4',
@@ -42,6 +45,7 @@ export const demoClients: Client[] = [
     health_score: 92,
     last_contact: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     created_at: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
