@@ -1,17 +1,67 @@
 import { NextResponse } from 'next/server';
+import { createServerClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-const NOTION_CLIENT_ID = process.env.NOTION_CLIENT_ID!;
-const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/notion/callback`;
+const NOTION_TOKEN = process.env.NOTION_TOKEN;
 
 export async function GET() {
-  const authUrl = new URL('https://api.notion.com/v1/oauth/authorize');
+  // Use internal integration token (simpler than OAuth for single-user apps)
+  if (!NOTION_TOKEN) {
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?error=notion_token_not_configured`
+    );
+  }
 
-  authUrl.searchParams.set('client_id', NOTION_CLIENT_ID);
-  authUrl.searchParams.set('redirect_uri', REDIRECT_URI);
-  authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('owner', 'user');
+  try {
+    // Verify the token works by fetching user info
+    const userResponse = await fetch('https://api.notion.com/v1/users/me', {
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+      },
+    });
 
-  return NextResponse.redirect(authUrl.toString());
+    if (!userResponse.ok) {
+      console.error('Notion token invalid');
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?error=invalid_notion_token`
+      );
+    }
+
+    const userData = await userResponse.json();
+
+    // Save to Supabase
+    const supabase = createServerClient();
+
+    const { error: dbError } = await supabase
+      .from('integrations')
+      .upsert({
+        type: 'notion',
+        access_token: NOTION_TOKEN,
+        refresh_token: null,
+        expires_at: null,
+        metadata: {
+          name: userData.name || 'Notion Integration',
+          type: userData.type,
+          bot_id: userData.bot?.owner?.user?.id || userData.id,
+        },
+        connected_at: new Date().toISOString(),
+      }, {
+        onConflict: 'type',
+      });
+
+    if (dbError) {
+      throw dbError;
+    }
+
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?success=notion`
+    );
+  } catch (err) {
+    console.error('Notion connection error:', err);
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?error=connection_failed`
+    );
+  }
 }
