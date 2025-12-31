@@ -13,6 +13,8 @@ import {
 import ClientCard from '@/components/ClientCard';
 import InsightCard from '@/components/InsightCard';
 import OnboardingFlow from '@/components/OnboardingFlow';
+import { useAuth } from '@/components/AuthProvider';
+import { demoClients, demoInsights } from '@/lib/demoData';
 import type { Client, Insight } from '@/types';
 
 const ONBOARDING_COMPLETE_KEY = 'ri_onboarding_complete';
@@ -24,24 +26,34 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const { isDemo } = useAuth();
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [isDemo]);
 
-  // Check if onboarding should be shown after data loads
+  // Check if onboarding should be shown after data loads (not in demo mode)
   useEffect(() => {
-    if (!loading && clients.length === 0) {
+    if (!loading && clients.length === 0 && !isDemo) {
       const onboardingComplete = localStorage.getItem(ONBOARDING_COMPLETE_KEY);
       if (!onboardingComplete) {
         setShowOnboarding(true);
       }
     }
-  }, [loading, clients.length]);
+  }, [loading, clients.length, isDemo]);
 
   const fetchData = async () => {
     try {
       setError(null);
+
+      // Use demo data in demo mode
+      if (isDemo) {
+        setClients(demoClients);
+        setInsights(demoInsights);
+        setLoading(false);
+        return;
+      }
+
       const [clientsRes, insightsRes] = await Promise.all([
         fetch('/api/clients'),
         fetch('/api/insights'),

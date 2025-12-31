@@ -1,7 +1,18 @@
+'use client';
+
 import Link from 'next/link';
-import { Zap, Mail, MessageSquare, FileText, ArrowRight, CheckCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Zap, Mail, MessageSquare, FileText, ArrowRight, CheckCircle, Play } from 'lucide-react';
+import { setDemoMode } from '@/lib/auth';
 
 export default function Home() {
+  const router = useRouter();
+
+  const handleTryDemo = () => {
+    setDemoMode();
+    router.push('/dashboard');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Header */}
@@ -13,12 +24,21 @@ export default function Home() {
             </div>
             <span className="text-lg font-semibold">Relationship Intelligence</span>
           </div>
-          <Link
-            href="/dashboard"
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
-          >
-            Go to Dashboard
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleTryDemo}
+              className="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <Play className="h-4 w-4" />
+              Try Demo
+            </button>
+            <Link
+              href="/login"
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+            >
+              Sign In
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -38,18 +58,19 @@ export default function Home() {
           AI that reads your conversations like you do — spotting risks, opportunities,
           and moments that matter before they slip through the cracks.
         </p>
-        <div className="mt-10 flex items-center justify-center gap-4">
-          <Link
-            href="/dashboard"
-            className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button
+            onClick={handleTryDemo}
+            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all flex items-center justify-center gap-2"
           >
-            Open Dashboard <ArrowRight className="h-4 w-4" />
-          </Link>
+            <Play className="h-4 w-4" />
+            Try Interactive Demo
+          </button>
           <Link
-            href="/dashboard/integrations"
-            className="px-6 py-3 bg-white text-gray-700 rounded-lg font-medium border border-gray-200 hover:border-gray-300 transition-colors"
+            href="/login"
+            className="w-full sm:w-auto px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
           >
-            Connect Your Tools
+            Sign In <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
@@ -126,15 +147,24 @@ export default function Home() {
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-10 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
           <p className="text-gray-300 mb-8 max-w-xl mx-auto">
-            Set up your integrations and start getting AI-powered insights about your client relationships.
+            Try the interactive demo to see how it works, or sign in to start getting AI-powered insights.
           </p>
-          <Link
-            href="/dashboard/integrations"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white text-gray-900 rounded-lg font-medium hover:bg-gray-100 transition-colors"
-          >
-            <CheckCircle className="h-5 w-5" />
-            Set Up Integrations
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={handleTryDemo}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-900 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+            >
+              <Play className="h-5 w-5" />
+              Try Demo
+            </button>
+            <Link
+              href="/login"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-transparent text-white border border-white/30 rounded-lg font-medium hover:bg-white/10 transition-colors"
+            >
+              <CheckCircle className="h-5 w-5" />
+              Sign In
+            </Link>
+          </div>
         </div>
       </section>
 

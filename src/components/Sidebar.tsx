@@ -13,7 +13,9 @@ import {
   FileText,
   Menu,
   X,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from './AuthProvider';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -28,6 +30,7 @@ const navigation = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isDemo, logout } = useAuth();
 
   const NavContent = () => (
     <>
@@ -69,12 +72,19 @@ export default function Sidebar() {
       <div className="border-t border-gray-800 p-4">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
-            <span className="text-sm font-medium text-white">DJ</span>
+            <span className="text-sm font-medium text-white">{isDemo ? 'DM' : 'DJ'}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">Daniel</p>
-            <p className="text-xs text-gray-400 truncate">Consultant</p>
+            <p className="text-sm font-medium text-white truncate">{isDemo ? 'Demo User' : 'Daniel'}</p>
+            <p className="text-xs text-gray-400 truncate">{isDemo ? 'Demo Mode' : 'Consultant'}</p>
           </div>
+          <button
+            onClick={logout}
+            className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </>
